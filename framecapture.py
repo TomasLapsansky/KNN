@@ -2,14 +2,12 @@ import cv2
 import pandas as pd 
 
 def video_capt(df,video):
-    vidcap = cv2.VideoCapture('1A.mov')
+    vidcap = cv2.VideoCapture('sample.mp4')
     success,image = vidcap.read()
     count = 0
     while success:
-        
-        
-
-        if((df['frame'] == count).any()):
+        print(count) 
+        if(count == 0):
             cv2.imwrite("capt/frame%d.jpg" % count, image)     # save frame as JPEG file      
             print("New image captured",count)
             

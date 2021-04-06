@@ -36,9 +36,8 @@ def video_capt(df,video):
             if(len(frame)==1):
                 cutframe(frame,video,count,image)
             else:
-                print(frame.iloc(0))
-                cutframe(frame.iloc(0),video,count,image)
-                
+                for index, row in frame.head(n=2).iterrows():
+                    cutframe(row,video,count,image)
 
                 
            

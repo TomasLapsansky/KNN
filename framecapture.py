@@ -6,19 +6,33 @@ def video_capt(df,video):
     success,image = vidcap.read()
     count = 0
     while success:
-        
-        
 
         if((df['frame'] == count).any()):
-            cv2.imwrite("capt/frame%d.jpg" % count, image)     # save frame as JPEG file      
-            print("New image captured",count)
+
+            
+            frame = df.loc[df['frame'] == count]
+
+            startpoint = (frame['UpperPointLongX'],frame['UpperPointLongY'])
+            end_point =  (frame['ShortSideX'],frame['ShortSideY'])
+            color = (255, 0, 0)
+            thickness = 2
+            try:
+                image = cv2.rectangle(image, startpoint, end_point, color, thickness)
+                
+                
+
+
+                cv2.imwrite("capt/frame%d.jpg" % count, image)     # save frame as JPEG file      
+                print("New image captured",count)
+            except:
+                print("ops")
             
         success,image = vidcap.read()
         
         if(not success):
             break
 
-        print('Read a new frame: ', success)
+        #print('Read a new frame: ', success)
         count += 1
 
 

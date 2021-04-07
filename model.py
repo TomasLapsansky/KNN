@@ -45,6 +45,7 @@ def create_pair(images,batch_size,positive):
 
     pairImg = []
     pairLab = []
+    labels = []
     pathA = "capt/A"
     pathB = "capt/B"
     width, height, rest = INPUT_SHAPE
@@ -70,13 +71,13 @@ def create_pair(images,batch_size,positive):
            
             img1=image
             img2=random.choice(set_list)
-            label=1
+            labels.append([1])
         else:
             
             img1=image
             img2=random.choice([x for x in os.listdir(pathB)
                 if os.path.isfile(os.path.join(pathB, x))])
-            label=0
+            labels.append([0])
 
         img1 = cv2.imread(pathA+"/"+img1)
         img1 = cv2.resize(img1,(width, height) , interpolation = cv2.INTER_AREA)
@@ -86,7 +87,7 @@ def create_pair(images,batch_size,positive):
         img2 = cv2.imread(pathB+"/"+img2)
         img2 = cv2.resize(img2,(width, height) , interpolation = cv2.INTER_AREA)
         
-        output.append((np.array([img1,img2]),label))
+        output.append([img1,img2])
         
 
         
@@ -95,7 +96,7 @@ def create_pair(images,batch_size,positive):
         
 
 
-    yield np.array(output)
+    return (np.array(output),np.array(labels))
             
         
 
@@ -166,15 +167,17 @@ def main():
 
     opt = SGD(learning_rate=0.01, momentum=0.0, nesterov=False)
     model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=["accuracy"])    
-
-    generatorOut = create_pair(1,16,True)
-    list_gen = np.array(generatorOut)
     
-    model.fit_generator(create_pair(1,16,True),
-	                            validation_data=create_pair(1,16,True),
-                                steps_per_epoch=SPE,
-	                            epochs=EPOCHS,
-                                validation_steps=SPE//BATCH_SIZE)
+    generatorOut = create_pair(1,BATCH_SIZE,True)
+    pairTrain, labelTrain = generatorOut
+    pairTest, labelTest = generatorOut
+
+
+    history = model.fit(
+	    [pairTrain[:, 0],pairTrain[:, 1]], labelTrain[:],
+	    validation_data=(pairTest, pairTest, labelTest),
+	    batch_size=BATCH_SIZE, 
+	    epochs=EPOCHS)
 
     
 

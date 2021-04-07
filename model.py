@@ -168,7 +168,7 @@ def main():
     opt = SGD(learning_rate=0.01, momentum=0.0, nesterov=False)
     model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=["accuracy"])    
     
-    generatorOut = create_pair(1,BATCH_SIZE,True)
+    generatorOut = create_pair(1,2000,True)
     pairTrain, labelTrain = generatorOut
     pairTest, labelTest = generatorOut
 

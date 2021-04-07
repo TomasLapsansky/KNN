@@ -26,7 +26,7 @@ import matplotlib.image as mpimg
 import random, os
 from sklearn.model_selection import train_test_split
 
-INPUT_SHAPE = (128,128,1)
+INPUT_SHAPE = (128,128,3)
 
 def get_pair(camera, id):
     try:
@@ -40,12 +40,16 @@ def get_pair(camera, id):
 
 
 def create_pair(images,batch_size,positive):
+
+    output = []
+
     pairImg = []
     pairLab = []
     path = "capt"
     width, height, rest = INPUT_SHAPE
 
-    for i in range(batch_size):
+    i = 0
+    while(i < batch_size):
         image = random.choice([x for x in os.listdir(path)
             if os.path.isfile(os.path.join(path, x))])
         if(image[1]=="B"):
@@ -81,13 +85,16 @@ def create_pair(images,batch_size,positive):
         img2 = cv2.imread(path+"/"+img2)
         img2 = cv2.resize(img2,(width, height) , interpolation = cv2.INTER_AREA)
         
-        pairImg.append([img1,img2])
-        pairLab.append(label)
+        output.append((np.array([img1,img2]),label))
+        
+
+        
+        i = i + 1
 
         
 
 
-    yield np.array(pairImg), np.array(pairLab)
+    yield np.array(output)
             
         
 
@@ -161,16 +168,6 @@ def main():
 
     generatorOut = create_pair(1,16,True)
     list_gen = np.array(generatorOut)
-    
-    #list_gen_item0 = list_gen[0][0][0][0]
-    #list_gen_item1 = list_gen[0][0][0][1]
-    
-    
-    #plt.imshow(cv2.cvtColor(list_gen_item1, cv2.COLOR_BGR2RGB))
-    #plt.show()
-    #plt.imshow(cv2.cvtColor(list_gen_item0, cv2.COLOR_BGR2RGB))
-    #plt.show()
-    
     
     model.fit_generator(create_pair(1,16,True),
 	                            validation_data=create_pair(1,16,True),

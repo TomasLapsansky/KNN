@@ -45,13 +45,14 @@ def create_pair(images,batch_size,positive):
 
     pairImg = []
     pairLab = []
-    path = "capt"
+    pathA = "capt/A"
+    pathB = "capt/B"
     width, height, rest = INPUT_SHAPE
 
     i = 0
     while(i < batch_size):
-        image = random.choice([x for x in os.listdir(path)
-            if os.path.isfile(os.path.join(path, x))])
+        image = random.choice([x for x in os.listdir(pathA)
+            if os.path.isfile(os.path.join(pathA, x))])
         if(image[1]=="B"):
             continue
         imagelist = image.split("_")
@@ -61,7 +62,7 @@ def create_pair(images,batch_size,positive):
         set_list = []
 
         if(random.choice([True, False])):
-            for file in os.listdir(path):
+            for file in os.listdir(pathB):
                 if file.startswith(prefix):
                     set_list.append(file)
             if(set_list == []):
@@ -73,16 +74,16 @@ def create_pair(images,batch_size,positive):
         else:
             
             img1=image
-            img2=random.choice([x for x in os.listdir(path)
-                if os.path.isfile(os.path.join(path, x))])
+            img2=random.choice([x for x in os.listdir(pathB)
+                if os.path.isfile(os.path.join(pathB, x))])
             label=0
 
-        img1 = cv2.imread(path+"/"+img1)
+        img1 = cv2.imread(pathA+"/"+img1)
         img1 = cv2.resize(img1,(width, height) , interpolation = cv2.INTER_AREA)
 
         
         
-        img2 = cv2.imread(path+"/"+img2)
+        img2 = cv2.imread(pathB+"/"+img2)
         img2 = cv2.resize(img2,(width, height) , interpolation = cv2.INTER_AREA)
         
         output.append((np.array([img1,img2]),label))

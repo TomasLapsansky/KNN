@@ -5,7 +5,6 @@ import pandas as pd
 
 videos = {}
 
-
 def cut_frame(car, video, count, image):
     # for car in frame:
     pointsX = [int(car['UpperPointShortX']), int(car['UpperPointCornerX']), int(car['UpperPointLongX']),
@@ -100,6 +99,7 @@ def main():
             file_name = (os.path.join("dataset/video_shots/", filename))
             csv_name = "dataset/video_shots/" + str(os.path.splitext(filename)[0]) + "_annotations.csv"
             df = pd.read_csv(csv_name)
+            print("Start processing video: " + file_name)
             video_capt(df, file_name)
 
     for video, cnt in videos.items():

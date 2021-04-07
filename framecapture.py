@@ -6,8 +6,7 @@ import pandas as pd
 videos = {}
 
 
-def cutframe(car, video, count, image):
-
+def cut_frame(car, video, count, image):
     # for car in frame:
     pointsX = [int(car['UpperPointShortX']), int(car['UpperPointCornerX']), int(car['UpperPointLongX']),
                int(car['CrossCornerX']), int(car['ShortSideX']), int(car['CornerX']), int(car['LongSideX']),
@@ -29,10 +28,9 @@ def cutframe(car, video, count, image):
     video_name = str(((os.path.splitext(video)[0]).split("/"))[-1])
     car_id = int(car['car_id'])
     if str(video_name)[1] == "A":
-        file_name = "capt/A/" + str(video_name)+ "_id_" + str(car_id) + "_frame_" + str(count) + ".jpg"
+        file_name = "capt/A/" + str(video_name) + "_id_" + str(car_id) + "_frame_" + str(count) + ".jpg"
     else:
-        file_name = "capt/B/" + str(video_name)+ "_id_" + str(car_id) + "_frame_" + str(count) + ".jpg"
-
+        file_name = "capt/B/" + str(video_name) + "_id_" + str(car_id) + "_frame_" + str(count) + ".jpg"
 
     try:
         cv2.imwrite(file_name, crop_image)  # save frame as JPEG file
@@ -56,10 +54,10 @@ def video_capt(df, video):
             frame = df.loc[df['frame'] == count]
 
             if len(frame) == 1:
-                cutframe(frame, video, count, image)
+                cut_frame(frame, video, count, image)
             else:
                 for index, row in frame.head(n=2).iterrows():
-                    cutframe(row, video, count, image)
+                    cut_frame(row, video, count, image)
 
         success, image = vidcap.read()
 
@@ -72,13 +70,19 @@ def video_capt(df, video):
 def show_circles(image, car):
     image = cv2.circle(image, (int(car['UpperPointShortX']), int(car['UpperPointShortY'])), radius=10,
                        color=(0, 0, 255), thickness=-1)
-    image = cv2.circle(image, (int(car['UpperPointCornerX']),int(car['UpperPointCornerY'])), radius=10, color=(0, 0, 255), thickness=-1)
-    image = cv2.circle(image, (int(car['UpperPointLongX']),int(car['UpperPointLongY'])), radius=10, color=(0, 0, 255), thickness=-1)
-    image = cv2.circle(image, (int(car['CrossCornerX']),int(car['CrossCornerY'])), radius=10, color=(0, 0, 255), thickness=-1)
-    image = cv2.circle(image, (int(car['ShortSideX']),int(car['ShortSideY'])), radius=10, color=(0, 0, 255), thickness=-1)
-    image = cv2.circle(image, (int(car['CornerX']),int(car['CornerY'])), radius=10, color=(0, 0, 255), thickness=-1)
-    image = cv2.circle(image, (int(car['LongSideX']),int(car['LongSideY'])), radius=10, color=(0, 0, 255), thickness=-1)
-    image = cv2.circle(image, (int(car['LowerCrossCornerX']),int(car['LowerCrossCornerY'])), radius=10, color=(0, 0, 255), thickness=-1)
+    image = cv2.circle(image, (int(car['UpperPointCornerX']), int(car['UpperPointCornerY'])), radius=10,
+                       color=(0, 0, 255), thickness=-1)
+    image = cv2.circle(image, (int(car['UpperPointLongX']), int(car['UpperPointLongY'])), radius=10, color=(0, 0, 255),
+                       thickness=-1)
+    image = cv2.circle(image, (int(car['CrossCornerX']), int(car['CrossCornerY'])), radius=10, color=(0, 0, 255),
+                       thickness=-1)
+    image = cv2.circle(image, (int(car['ShortSideX']), int(car['ShortSideY'])), radius=10, color=(0, 0, 255),
+                       thickness=-1)
+    image = cv2.circle(image, (int(car['CornerX']), int(car['CornerY'])), radius=10, color=(0, 0, 255), thickness=-1)
+    image = cv2.circle(image, (int(car['LongSideX']), int(car['LongSideY'])), radius=10, color=(0, 0, 255),
+                       thickness=-1)
+    image = cv2.circle(image, (int(car['LowerCrossCornerX']), int(car['LowerCrossCornerY'])), radius=10,
+                       color=(0, 0, 255), thickness=-1)
 
     return image
 

@@ -5,6 +5,7 @@ import pandas as pd
 
 videos = {}
 
+
 def cut_frame(car, video, count, image):
     # for car in frame:
     pointsX = [int(car['UpperPointShortX']), int(car['UpperPointCornerX']), int(car['UpperPointLongX']),
@@ -42,10 +43,20 @@ def cut_frame(car, video, count, image):
         videos[video] = 1
 
 
+def get_count(file_name):
+    # fix offset so annotation is correct
+    if file_name[-5] == "A":
+        return 1
+    elif file_name[-5] == "B":
+        return 3
+    else:
+        return 0
+
+
 def video_capt(df, video):
     vidcap = cv2.VideoCapture(video)
     success, image = vidcap.read()
-    count = 3  # fix offset so annotation is correct
+    count = get_count(video)
     while success:
 
         if (df['frame'] == count).any():

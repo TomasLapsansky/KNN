@@ -52,6 +52,7 @@ def create_pair(images,batch_size,positive):
 
     i = 0
     while(i < batch_size):
+        print(i, batch_size, end='\r')
         image = random.choice([x for x in os.listdir(pathA)
             if os.path.isfile(os.path.join(pathA, x))])
         if(image[1]=="B"):
@@ -176,7 +177,7 @@ def main():
     history = model.fit(
 	    [pairTrain[:, 0],pairTrain[:, 1]], labelTrain[:],
 	    validation_data=([pairTrain[:, 0],pairTrain[:, 1]], labelTrain[:]),
-	    batch_size=BATCH_SIZE, 
+	    batch_size=BATCH_SIZE,
 	    epochs=EPOCHS)
 
     

@@ -17,9 +17,13 @@ from keras.regularizers import l2
 import numpy as np
 from keras import backend as K
 import pandas as pd
+import cv2
+
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 
 
-
+import random, os
 from sklearn.model_selection import train_test_split
 
 INPUT_SHAPE = (128,128,1)
@@ -31,7 +35,64 @@ def get_pair(camera, id):
         pair = str(df[df.camA.str.startswith(tuple(options))]['camB'])
         return pair.split("_")[0].split('"')[1]
     except:
-        return ""
+        return "none/none"
+
+
+
+def create_pair(images,batch_size,positive):
+    pairImg = []
+    pairLab = []
+    path = "capt"
+    width, height, rest = INPUT_SHAPE
+
+    for i in range(batch_size):
+        image = random.choice([x for x in os.listdir(path)
+            if os.path.isfile(os.path.join(path, x))])
+        if(image[1]=="B"):
+            continue
+        imagelist = image.split("_")
+        pair = get_pair(int(imagelist[0][0]),int(imagelist[2]))
+        pair = pair.split("/")
+        prefix = pair[0][0]+"B_id_"+pair[1]
+        set_list = []
+
+        if(random.choice([True, False])):
+            for file in os.listdir(path):
+                if file.startswith(prefix):
+                    set_list.append(file)
+            if(set_list == []):
+                continue
+           
+            img1=image
+            img2=random.choice(set_list)
+            label=1
+        else:
+            
+            img1=image
+            img2=random.choice([x for x in os.listdir(path)
+                if os.path.isfile(os.path.join(path, x))])
+            label=0
+
+        img1 = cv2.imread(path+"/"+img1)
+        img1 = cv2.resize(img1,(width, height) , interpolation = cv2.INTER_AREA)
+
+        
+        
+        img2 = cv2.imread(path+"/"+img2)
+        img2 = cv2.resize(img2,(width, height) , interpolation = cv2.INTER_AREA)
+        
+        pairImg.append([img1,img2])
+        pairLab.append(label)
+
+        
+
+
+    yield np.array(pairImg), np.array(pairLab)
+            
+        
+
+
+
 
 
 def initialize_weights(shape, dtype=None):
@@ -81,13 +142,13 @@ def create_model(input_shape=(128,128,1)):
     
     # return the model
 
-    siamese_net.summary()
+    #siamese_net.summary()
 
     return siamese_net
 
 
 def main():
-    print(get_pair(1, 16666))
+    
     EPOCHS = 100
     BATCH_SIZE = 16
     SPE = 100
@@ -95,6 +156,27 @@ def main():
     
     model = create_model(input_shape=INPUT_SHAPE)
 
+    opt = SGD(learning_rate=0.01, momentum=0.0, nesterov=False)
+    model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=["accuracy"])    
+
+    generatorOut = create_pair(1,16,True)
+    list_gen = np.array(generatorOut)
+    
+    #list_gen_item0 = list_gen[0][0][0][0]
+    #list_gen_item1 = list_gen[0][0][0][1]
+    
+    
+    #plt.imshow(cv2.cvtColor(list_gen_item1, cv2.COLOR_BGR2RGB))
+    #plt.show()
+    #plt.imshow(cv2.cvtColor(list_gen_item0, cv2.COLOR_BGR2RGB))
+    #plt.show()
+    
+    
+    model.fit_generator(create_pair(1,16,True),
+	                            validation_data=create_pair(1,16,True),
+                                steps_per_epoch=SPE,
+	                            epochs=EPOCHS,
+                                validation_steps=SPE//BATCH_SIZE)
 
     
 

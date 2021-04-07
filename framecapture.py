@@ -1,7 +1,7 @@
+import os
+from os import path
 import cv2
 import pandas as pd
-import os
-import csv
 
 videos = {}
 
@@ -35,7 +35,10 @@ def cutframe(car,video,count,image):
 
     video_name = str(((os.path.splitext(video)[0]).split("/"))[-1])
     car_id = int(car['car_id'])
-    file_name = "capt/" + str(video_name)+ "_id_" + str(car_id) + "_frame_" + str(count) + ".jpg"
+    if str(video_name)[1] == "A":
+        file_name = "capt/A/" + str(video_name)+ "_id_" + str(car_id) + "_frame_" + str(count) + ".jpg"
+    else:
+        file_name = "capt/B/" + str(video_name)+ "_id_" + str(car_id) + "_frame_" + str(count) + ".jpg"
 
 
     try:
@@ -80,6 +83,13 @@ def video_capt(df,video):
 
 
 def main():
+
+    if not path.exists("./capt"):
+        os.mkdir("./capt")
+    if not path.exists("./capt/A"):
+        os.mkdir("./capt/A")
+    if not path.exists("./capt/B"):
+        os.mkdir("./capt/B")
 
     for filename in os.listdir("dataset/video_shots/"):
         if filename.endswith(".mov"):

@@ -175,7 +175,7 @@ def main():
 
     history = model.fit(
 	    [pairTrain[:, 0],pairTrain[:, 1]], labelTrain[:],
-	    validation_data=(pairTest, pairTest, labelTest),
+	    validation_data=([pairTrain[:, 0],pairTrain[:, 1]], labelTrain[:]),
 	    batch_size=BATCH_SIZE, 
 	    epochs=EPOCHS)
 

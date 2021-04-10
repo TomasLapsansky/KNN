@@ -48,12 +48,16 @@ def create_pair(images, batch_size, positive):
     pathA = "capt/A"
     pathB = "capt/B"
     width, height, rest = INPUT_SHAPE
+    print("Nacitavam subory...", end="")
+    dataset=[x for x in os.listdir(pathA)
+                               if os.path.isfile(os.path.join(pathA, x))]   
+    print("DONE")
 
     i = 0
     while (i < batch_size):
         print(i, batch_size, end='\r')
-        image = random.choice([x for x in os.listdir(pathA)
-                               if os.path.isfile(os.path.join(pathA, x))])
+        
+        image = random.choice(dataset)
         if (image[1] == "B"):
             continue
         imagelist = image.split("_")

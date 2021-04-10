@@ -61,6 +61,7 @@ def create_pair(images, batch_size, positive):
         if (image[1] == "B"):
             print("Nenasiel som A")
             continue
+
         imagelist = image.split("_")
         pair = get_pair(int(imagelist[0][0]), int(imagelist[2]))
         pair = pair.split("/")
@@ -72,6 +73,9 @@ def create_pair(images, batch_size, positive):
             for file in os.listdir(pathB):
                 if file.startswith(prefix):
                     set_list.append(file)
+                else:
+                    print("Nemam B")
+
             if (set_list == []):
                 continue
 

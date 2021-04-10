@@ -59,6 +59,7 @@ def create_pair(images, batch_size, positive):
         
         image = random.choice(dataset)
         if (image[1] == "B"):
+            print("Nenasiel som A")
             continue
         imagelist = image.split("_")
         pair = get_pair(int(imagelist[0][0]), int(imagelist[2]))

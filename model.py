@@ -18,7 +18,7 @@ import numpy as np
 from keras import backend as K
 import pandas as pd
 import cv2
-
+import re
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
@@ -48,9 +48,13 @@ def create_pair(images, batch_size, positive):
     pathA = "capt/A"
     pathB = "capt/B"
     width, height, rest = INPUT_SHAPE
-    print("Nacitavam subory...", end="")
+    print("Nacitavam subory...")
     dataset=[x for x in os.listdir(pathA)
-                               if os.path.isfile(os.path.join(pathA, x))]   
+                               if os.path.isfile(os.path.join(pathA, x))]  
+
+    datasetB = [x for x in os.listdir(pathB)
+                                  if os.path.isfile(os.path.join(pathB, x))]
+     
     print("DONE")
 
     i = 0
@@ -68,9 +72,15 @@ def create_pair(images, batch_size, positive):
         prefix = pair[0][0] + "B_id_" + pair[1]
         set_list = []
         print("Mam obrazok A",i)
-
+        
+        
         if (random.choice([True, False])):
-            for file in os.listdir(pathB):
+            pat = re.compile(r"^"+prefix)
+            dir_list = os.listdir(pathB)
+            list_name =  [i for i in dir_list if pat.match(i)]          
+            
+            for file in list_name:
+                
                 if file.startswith(prefix):
                     set_list.append(file)
                 else:
@@ -87,8 +97,7 @@ def create_pair(images, batch_size, positive):
         else:
 
             img1 = image
-            img2 = random.choice([x for x in os.listdir(pathB)
-                                  if os.path.isfile(os.path.join(pathB, x))])
+            img2 = random.choice(datasetB)
             labels.append([0])
             print("Mam obrazok B",i)
 

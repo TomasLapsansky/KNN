@@ -13,6 +13,7 @@ from keras.callbacks import ModelCheckpoint
 from tensorflow.keras import regularizers
 from keras.layers.core import Lambda
 from keras.regularizers import l2
+from keras.optimizers import Adam
 import numpy as np
 from keras import backend as K
 import pandas as pd
@@ -26,6 +27,7 @@ from sklearn.model_selection import train_test_split
 
 INPUT_SHAPE = (128, 128, 3)
 
+L1_layer = Lambda(lambda tensor:K.abs(tensor[0] - tensor[1]))
 
 def get_pair(camera, id):
     try:
@@ -98,62 +100,52 @@ def initialize_bias(shape, dtype=None):
     return np.random.normal(loc=0.5, scale=1e-2, size=shape)
 
 
+
+def small_vgg(input_shape):
+    input1 = Input(input_shape)
+    x = Conv2D(64, (3, 3), activation='relu', padding='same', name='block1_conv1')(input1)
+
+    # Block 1
+    x = MaxPooling2D((2, 2), strides=(2, 2), name='block1_pool')(x)
+
+    # Block 2
+    x = Conv2D(128, (3, 3), activation='relu', padding='same', name='block2_conv1')(x)
+    x = MaxPooling2D((2, 2), strides=(2, 2), name='block2_pool')(x)
+    x = Conv2D(128, (3, 3), activation='relu', padding='same', name='block2_conv2')(x)
+    x = MaxPooling2D((2, 2), strides=(2, 2), name='block3_pool')(x)
+
+    # Block 3
+    x = Conv2D(256, (3, 3), activation='relu', padding='same', name='block3_conv1')(x)
+    x = MaxPooling2D((2, 2), strides=(2, 2), name='block4_pool')(x)
+
+    x = Conv2D(512, (3, 3), activation='relu', padding='same', name='block4_conv1')(x)
+    x = MaxPooling2D((2, 2), strides=(2, 2), name='block5_pool')(x)
+
+    x = Flatten()(x)
+    x = Dense(512)(x)
+
+    return Model(input1,x)
+
+
 def create_model(input_shape=(128, 128, 1)):
     # Define the tensors for the two input images
     left_input = Input(input_shape)
     right_input = Input(input_shape)
     chanDim = -1
 
-    # Convolutional Neural Network
-    model = Sequential()
-    model.add(Conv2D(32, (3, 3), padding="same",input_shape=input_shape))
-    model.add(Activation("relu"))
-    model.add(BatchNormalization(axis=chanDim))
-    model.add(MaxPooling2D(pool_size=(3, 3)))
-    model.add(Dropout(0.25))
+    convnet = small_vgg(input_shape)
+    encoded_l = convnet(left_input)
+    encoded_r = convnet(right_input)
 
-    model.add(Conv2D(64, (3, 3), padding="same"))
-    model.add(Activation("relu"))
-    model.add(BatchNormalization(axis=chanDim))
-    model.add(Conv2D(64, (3, 3), padding="same"))
-    model.add(Activation("relu"))
-    model.add(BatchNormalization(axis=chanDim))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Dropout(0.25))
-
-    model.add(Conv2D(128, (3, 3), padding="same"))
-    model.add(Activation("relu"))
-    model.add(BatchNormalization(axis=chanDim))
-    model.add(Conv2D(128, (3, 3), padding="same"))
-    model.add(Activation("relu"))
-    model.add(BatchNormalization(axis=chanDim))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Dropout(0.25))
-
-    model.add(Flatten())
-    model.add(Dense(4096, activation='relu',
-                    kernel_regularizer=l2(1e-3),
-                    bias_initializer=initialize_bias))
-
-    # Generate the encodings (feature vectors) for the two images
-    encoded_l = model(left_input)
-    encoded_r = model(right_input)
-
-    # Add a customized layer to compute the absolute difference between the encodings
-    L1_layer = Lambda(lambda tensors: K.abs(tensors[0] - tensors[1]))
     L1_distance = L1_layer([encoded_l, encoded_r])
 
-    # Add a dense layer with a sigmoid unit to generate the similarity score
-    prediction = Dense(1, activation='sigmoid', bias_initializer=initialize_bias)(L1_distance)
+    prediction = Dense(2,activation='softmax')(L1_distance)
+    optimizer = Adam(0.001, decay=2.5e-4)
 
-    # Connect the inputs with the outputs
-    siamese_net = Model(inputs=[left_input, right_input], outputs=prediction)
+    model = Model(inputs=[left_input,right_input],outputs=prediction)
+    model.compile(loss="binary_crossentropy",optimizer=optimizer,metrics=['accuracy'])
 
-    # return the model
-    print(model.summary())
-    print(siamese_net.summary())
-
-    return siamese_net
+    return model
 
 
 def main():
@@ -164,7 +156,8 @@ def main():
 
     model = create_model(input_shape=INPUT_SHAPE)
 
-    opt = SGD(learning_rate=0.01, momentum=0.0, nesterov=False)
+    #opt = SGD(learning_rate=0.01, momentum=0.0, nesterov=False)
+    opt = Adam(0.001, decay=2.5e-4)
     model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=["accuracy"])
 
     traingeneratorOut = create_pair(1, 2000, True)

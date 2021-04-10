@@ -65,6 +65,7 @@ def create_pair(images, batch_size, positive):
         pair = pair.split("/")
         prefix = pair[0][0] + "B_id_" + pair[1]
         set_list = []
+        print("Mam obrazok A",i)
 
         if (random.choice([True, False])):
             for file in os.listdir(pathB):
@@ -76,12 +77,15 @@ def create_pair(images, batch_size, positive):
             img1 = image
             img2 = random.choice(set_list)
             labels.append([1])
+            print("Mam obrazok B",i)
+
         else:
 
             img1 = image
             img2 = random.choice([x for x in os.listdir(pathB)
                                   if os.path.isfile(os.path.join(pathB, x))])
             labels.append([0])
+            print("Mam obrazok B",i)
 
         img1 = cv2.imread(pathA + "/" + img1)
         img1 = cv2.resize(img1, (width, height), interpolation=cv2.INTER_AREA)

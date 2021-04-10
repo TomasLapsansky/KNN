@@ -4,7 +4,7 @@ from keras.models import Sequential
 from tensorflow.keras import layers
 from keras.layers import Dense, Activation, Conv2D, Flatten, MaxPooling2D, Dropout, Input
 from keras.layers import Dense
-
+from keras.layers.normalization import BatchNormalization
 from keras import Model
 from keras import optimizers
 from keras.preprocessing.image import ImageDataGenerator
@@ -102,22 +102,36 @@ def create_model(input_shape=(128, 128, 1)):
     # Define the tensors for the two input images
     left_input = Input(input_shape)
     right_input = Input(input_shape)
+    chanDim = -1
 
     # Convolutional Neural Network
     model = Sequential()
-    model.add(Conv2D(64, (10, 10), activation='relu', input_shape=input_shape,
-                     kernel_regularizer=l2(2e-4)))
-    model.add(MaxPooling2D())
-    model.add(Conv2D(128, (7, 7), activation='relu',
-                     bias_initializer=initialize_bias, kernel_regularizer=l2(2e-4)))
-    model.add(MaxPooling2D())
-    model.add(Conv2D(128, (4, 4), activation='relu',
-                     bias_initializer=initialize_bias, kernel_regularizer=l2(2e-4)))
-    model.add(MaxPooling2D())
-    model.add(Conv2D(256, (4, 4), activation='relu',
-                     bias_initializer=initialize_bias, kernel_regularizer=l2(2e-4)))
+    model.add(Conv2D(32, (3, 3), padding="same",input_shape=input_shape))
+    model.add(Activation("relu"))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(MaxPooling2D(pool_size=(3, 3)))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2D(64, (3, 3), padding="same"))
+    model.add(Activation("relu"))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(Conv2D(64, (3, 3), padding="same"))
+    model.add(Activation("relu"))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.25))
+
+    model.add(Conv2D(128, (3, 3), padding="same"))
+    model.add(Activation("relu"))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(Conv2D(128, (3, 3), padding="same"))
+    model.add(Activation("relu"))
+    model.add(BatchNormalization(axis=chanDim))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.25))
+
     model.add(Flatten())
-    model.add(Dense(4096, activation='sigmoid',
+    model.add(Dense(4096, activation='relu',
                     kernel_regularizer=l2(1e-3),
                     bias_initializer=initialize_bias))
 
@@ -136,8 +150,8 @@ def create_model(input_shape=(128, 128, 1)):
     siamese_net = Model(inputs=[left_input, right_input], outputs=prediction)
 
     # return the model
-
-    # siamese_net.summary()
+    print(model.summary())
+    print(siamese_net.summary())
 
     return siamese_net
 
@@ -153,9 +167,10 @@ def main():
     opt = SGD(learning_rate=0.01, momentum=0.0, nesterov=False)
     model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=["accuracy"])
 
-    generatorOut = create_pair(1, 2000, True)
-    pairTrain, labelTrain = generatorOut
-    pairTest, labelTest = generatorOut
+    traingeneratorOut = create_pair(1, 2000, True)
+    validgeneratorOut = create_pair(1, 500, True)
+    pairTrain, labelTrain = traingeneratorOut
+    pairTest, labelTest = validgeneratorOut
 
     history = model.fit(
         [pairTrain[:, 0], pairTrain[:, 1]], labelTrain[:],

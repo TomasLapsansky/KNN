@@ -68,6 +68,9 @@ def create_pair(images, batch_size, positive):
 
         imagelist = image.split("_")
         pair = get_pair(int(imagelist[0][0]), int(imagelist[2]))
+        if(pair=="none/none"):
+            continue
+        
         pair = pair.split("/")
         prefix = pair[0][0] + "B_id_" + pair[1]
         set_list = []
@@ -153,8 +156,7 @@ def create_model(input_shape=(128, 128, 1)):
     # Define the tensors for the two input images
     left_input = Input(input_shape)
     right_input = Input(input_shape)
-    chanDim = -1
-
+    
     convnet = small_vgg(input_shape)
     encoded_l = convnet(left_input)
     encoded_r = convnet(right_input)
@@ -182,13 +184,15 @@ def main():
     opt = Adam(0.001, decay=2.5e-4)
     model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=["accuracy"])
 
-    traingeneratorOut = create_pair(1, 2000, True)
-    validgeneratorOut = create_pair(1, 500, True)
+    traingeneratorOut = create_pair(1, 20, True)
+    validgeneratorOut = create_pair(1, 20, True)
     pairTrain, labelTrain = traingeneratorOut
     pairTest, labelTest = validgeneratorOut
 
+    
+
     history = model.fit(
-        [pairTrain[:, 0], pairTrain[:, 1]], labelTrain[:],
+        [pairTrain[:, 0], pairTrain[:, 1]], labelTrain[:], #NIEKDE TU JE CHYBA
         validation_data=([pairTrain[:, 0], pairTrain[:, 1]], labelTrain[:]),
         batch_size=BATCH_SIZE,
         epochs=EPOCHS)

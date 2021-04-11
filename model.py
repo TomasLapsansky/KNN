@@ -127,11 +127,8 @@ def create_pair(images, batch_size, positive, dataset, datasetB):
 def initialize_weights(shape, dtype=None):
     return np.random.normal(loc=0.0, scale=1e-2, size=shape)
 
-
 def initialize_bias(shape, dtype=None):
     return np.random.normal(loc=0.5, scale=1e-2, size=shape)
-
-
 
 def small_vgg(input_shape):
     input1 = Input(input_shape)
@@ -157,7 +154,6 @@ def small_vgg(input_shape):
     x = Dense(512)(x)
 
     return Model(input1,x)
-
 
 def create_model(input_shape=(128, 128, 3)):
     
@@ -198,8 +194,29 @@ def parseArgs():
     parser = argparse.ArgumentParser(description='Directory with captured samples')
     parser.add_argument('-d', action='store', dest='directory',
                         help='Directory to captures', default="")
+    parser.add_argument('-c', action='store', dest='checkpoint',
+                        help='Checkpoint file', default=None)
 
     return parser.parse_args()
+
+def my_evaluate(model, img_car1, img_car2):
+
+    width, height, rest = INPUT_SHAPE
+
+    car1 = cv2.imread(img_car1)
+    car1 = cv2.resize(car1, (width, height))
+
+    car2 = cv2.imread(img_car2)
+    car2 = cv2.resize(car2, (width, height))
+
+    resized = [car1,car2]
+
+    out=list(model.predict(resized))
+
+    print(out)
+
+
+
 
 
 def main():
@@ -213,44 +230,53 @@ def main():
     # tensorflow devices (GPU) print
     # print(device_lib.list_local_devices())
 
-    print("picka " + arguments.directory)
-
-    print("Nacitavam subory...")
-    pathA = arguments.directory + "capt/A"
-    pathB = arguments.directory + "capt/B"
-    dataset=[x for x in os.listdir(pathA)
-                               if os.path.isfile(os.path.join(pathA, x))]  
-
-    datasetB = [x for x in os.listdir(pathB)
-                                  if os.path.isfile(os.path.join(pathB, x))]
-     
-    print("DONE")
-
-    checkpoint_path = os.getcwd()+"/checkpoint"
-    if not os.path.exists(checkpoint_path):
-        os.mkdir(checkpoint_path)
-
-    checkpoint_dir = os.path.dirname(checkpoint_path)
-    filepath="weights-improvement-epoch-{epoch:02d}-val-{val_accuracy:.2f}.hdf5"
-    checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
-    callbacks_list = [checkpoint]
-
-
-
-    traingeneratorOut = create_pair(1, 5000, True, dataset, datasetB)
-    validgeneratorOut = create_pair(1, 1000, True, dataset, datasetB)
-    pairTrain, labelTrain = traingeneratorOut
-    pairTest, labelTest = validgeneratorOut
     model = create_model(input_shape=INPUT_SHAPE)
 
-    #opt = SGD(learning_rate=0.01, momentum=0.0, nesterov=False)
+    if(arguments.checkpoint!=None):
+        checkpoint = arguments.checkpoint
+        print("Using checkpoint",checkpoint)
+        if(not os.path.exists(checkpoint)):
+            print("Checkpoint nenajdeny")
+            exit(1)
+        model.load_weights(checkpoint)
+    else:
+        print("Start training ")
+        print("Loading files...")
+        pathA = arguments.directory + "capt/A"
+        pathB = arguments.directory + "capt/B"
+        dataset=[x for x in os.listdir(pathA)
+                                   if os.path.isfile(os.path.join(pathA, x))]  
+
+        datasetB = [x for x in os.listdir(pathB)
+                                      if os.path.isfile(os.path.join(pathB, x))]
+     
+        print("DONE")
+
+        checkpoint_path = os.getcwd()+"/checkpoint"
+        if not os.path.exists(checkpoint_path):
+            os.mkdir(checkpoint_path)
+
+        checkpoint_dir = os.path.dirname(checkpoint_path)
+        filepath="weights-improvement-epoch-{epoch:02d}-val-{val_accuracy:.2f}.hdf5"
+        checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
+        callbacks_list = [checkpoint]
+
+
+
+        traingeneratorOut = create_pair(1, 5000, True, dataset, datasetB)
+        validgeneratorOut = create_pair(1, 1000, True, dataset, datasetB)
+        pairTrain, labelTrain = traingeneratorOut
+        pairTest, labelTest = validgeneratorOut
+        
+
+        #opt = SGD(learning_rate=0.01, momentum=0.0, nesterov=False)
     
-    history = model.fit(
-        [pairTrain[:, 0], pairTrain[:, 1]], labelTrain, 
-        validation_data=([pairTest[:, 0], pairTest[:, 1]], labelTest[:]),
-        batch_size=BATCH_SIZE,
-        epochs=EPOCHS,
-        callbacks=callbacks_list)
+        history = model.fit(
+            [pairTrain[:, 0], pairTrain[:, 1]], labelTrain, 
+            validation_data=([pairTest[:, 0], pairTest[:, 1]], labelTest[:]),
+            batch_size=BATCH_SIZE,
+            epochs=EPOCHS,
+            callbacks=callbacks_list)
 
 
 if __name__ == "__main__":

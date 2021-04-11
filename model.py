@@ -210,6 +210,15 @@ def main():
      
     print("DONE")
 
+    checkpoint_path = "checkpoint/"
+
+    checkpoint_dir = os.path.dirname(checkpoint_path)
+    filepath="weights-improvement-epoch-{epoch:02d}-val-{val_accuracy:.2f}.hdf5"
+    checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
+    callbacks_list = [checkpoint]
+
+
+
     traingeneratorOut = create_pair(1, 5000, True, dataset, datasetB)
     validgeneratorOut = create_pair(1, 1000, True, dataset, datasetB)
     pairTrain, labelTrain = traingeneratorOut
@@ -222,7 +231,8 @@ def main():
         [pairTrain[:, 0], pairTrain[:, 1]], labelTrain, 
         validation_data=([pairTest[:, 0], pairTest[:, 1]], labelTest[:]),
         batch_size=BATCH_SIZE,
-        epochs=EPOCHS)
+        epochs=EPOCHS,
+        callbacks=callbacks_list))
 
 
 if __name__ == "__main__":

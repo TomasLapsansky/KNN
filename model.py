@@ -180,8 +180,15 @@ def create_model(input_shape=(128, 128, 3)):
 
 
     L1_distance = L1_layer([encoded_l, encoded_r])
+    x = Dense(1024)(L1_distance)
+    x = Dropout(0.2)(x)
+    x = Dense(512)(x)
+    x = Dropout(0.2)(x)
+    x = Dense(256)(x)
+    x = Dropout(0.2)(x)
+    x = Activation('relu')(x)
 
-    prediction = Dense(2,activation='softmax')(L1_distance)
+    prediction = Dense(1,activation='softmax')(x)
     optimizer = Adam(0.001, decay=2.5e-4)
 
     model = Model(inputs=[left_input,right_input],outputs=prediction)

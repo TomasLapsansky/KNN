@@ -2,6 +2,7 @@ import tensorflow as tf
 import keras
 from keras.models import Sequential
 from tensorflow.keras import layers
+from tensorflow.python.client import device_lib
 from keras.layers import Dense, Activation, Conv2D, Flatten, MaxPooling2D, Dropout, Input
 from keras.layers import Dense
 from keras.layers.normalization import BatchNormalization
@@ -189,6 +190,8 @@ def main():
     BATCH_SIZE = 16
     SPE = 100
     no_output = 2
+
+    print(device_lib.list_local_devices())
 
     traingeneratorOut = create_pair(1, 2000, True)
     validgeneratorOut = create_pair(1, 1000, True)

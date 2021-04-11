@@ -180,8 +180,9 @@ def create_model(input_shape=(128, 128, 3)):
     x = Dropout(0.2)(x)
     x = Activation('relu')(x)
 
-    prediction = Dense(1,activation='softmax')(x)
-    optimizer = Adam(0.001, decay=2.5e-4)
+    prediction = Dense(1,activation='sigmoid')(x)
+    #optimizer = Adam(0.001, decay=2.5e-4)
+    optimizer = SGD(learning_rate=0.0001, momentum=0.4)
 
     model = Model(inputs=[left_input,right_input],outputs=prediction)
     model.compile(loss="binary_crossentropy",optimizer=optimizer,metrics=['accuracy'])

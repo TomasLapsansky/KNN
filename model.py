@@ -164,18 +164,24 @@ def small_vgg(input_shape):
     return Model(input1,x)
 
 
-def create_model(input_shape=(128, 128, 1)):
-    # Define the tensors for the two input images
+def create_model(input_shape=(128, 128, 3)):
+    
+    # Vytvorenie malej siete pre siam 
+    convnet = small_vgg(input_shape)
+
+    # Vytvorenie vstupov
     left_input = Input(input_shape)
     right_input = Input(input_shape)
     
-    convnet = small_vgg(input_shape)
+    #Auto 1
     encoded_l = convnet(left_input)
+    #Auto 2
     encoded_r = convnet(right_input)
+
 
     L1_distance = L1_layer([encoded_l, encoded_r])
 
-    prediction = Dense(1,activation='softmax')(L1_distance)
+    prediction = Dense(2,activation='softmax')(L1_distance)
     optimizer = Adam(0.001, decay=2.5e-4)
 
     model = Model(inputs=[left_input,right_input],outputs=prediction)
@@ -197,18 +203,10 @@ def main():
     validgeneratorOut = create_pair(1, 1000, True)
     pairTrain, labelTrain = traingeneratorOut
     pairTest, labelTest = validgeneratorOut
-
-
     model = create_model(input_shape=INPUT_SHAPE)
 
     #opt = SGD(learning_rate=0.01, momentum=0.0, nesterov=False)
-    opt = Adam(0.001, decay=2.5e-4)
-    model.compile(loss='binary_crossentropy', optimizer=opt, metrics=["accuracy"])
-
     
-
-    
-    print(labelTrain[:])
     history = model.fit(
         [pairTrain[:, 0], pairTrain[:, 1]], labelTrain, 
         validation_data=([pairTrain[:, 0], pairTrain[:, 1]], labelTrain[:]),

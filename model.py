@@ -210,7 +210,7 @@ def main():
      
     print("DONE")
 
-    traingeneratorOut = create_pair(1, 2000, True, dataset, datasetB)
+    traingeneratorOut = create_pair(1, 5000, True, dataset, datasetB)
     validgeneratorOut = create_pair(1, 1000, True, dataset, datasetB)
     pairTrain, labelTrain = traingeneratorOut
     pairTest, labelTest = validgeneratorOut

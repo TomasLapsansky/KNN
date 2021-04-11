@@ -74,10 +74,10 @@ def create_pair(images, batch_size, positive):
         pair = pair.split("/")
         prefix = pair[0][0] + "B_id_" + pair[1]
         set_list = []
-        print("Mam obrazok A",i)
+        #print("Mam obrazok A",i)
+        label = None
         
-        
-        if (random.choice([True, False])):
+        if (random.choice([True,True , True, False])):
             pat = re.compile(r"^"+prefix)
             dir_list = os.listdir(pathB)
             list_name =  [i for i in dir_list if pat.match(i)]          
@@ -94,22 +94,33 @@ def create_pair(images, batch_size, positive):
 
             img1 = image
             img2 = random.choice(set_list)
-            labels.append([1])
-            print("Mam obrazok B",i)
+            label = [1]
+            #print("Mam obrazok B",i)
 
         else:
 
             img1 = image
             img2 = random.choice(datasetB)
-            labels.append([0])
-            print("Mam obrazok B",i)
+            label = [0]
+            #print("Mam obrazok B",i)
 
         img1 = cv2.imread(pathA + "/" + img1)
-        img1 = cv2.resize(img1, (width, height), interpolation=cv2.INTER_AREA)
+        img1 = cv2.resize(img1, (width, height))
 
         img2 = cv2.imread(pathB + "/" + img2)
-        img2 = cv2.resize(img2, (width, height), interpolation=cv2.INTER_AREA)
+        img2 = cv2.resize(img2, (width, height))
 
+       #plt.figure()
+
+       # f, axarr = plt.subplots(2,1) 
+
+# use the created array to output your multiple images. In this case I have stacked 4 images vertically
+       # axarr[0].imshow(img1,cmap="hot")
+       # axarr[1].imshow(img2,cmap="hot")
+       # print(label)
+       # plt.show()
+
+        labels.append(label)
         output.append([img1, img2])
 
         i = i + 1
@@ -163,12 +174,13 @@ def create_model(input_shape=(128, 128, 1)):
 
     L1_distance = L1_layer([encoded_l, encoded_r])
 
-    prediction = Dense(2,activation='softmax')(L1_distance)
+    prediction = Dense(1,activation='softmax')(L1_distance)
     optimizer = Adam(0.001, decay=2.5e-4)
 
     model = Model(inputs=[left_input,right_input],outputs=prediction)
     model.compile(loss="binary_crossentropy",optimizer=optimizer,metrics=['accuracy'])
 
+    print(model.summary())
     return model
 
 
@@ -178,21 +190,24 @@ def main():
     SPE = 100
     no_output = 2
 
+    traingeneratorOut = create_pair(1, 2000, True)
+    validgeneratorOut = create_pair(1, 1000, True)
+    pairTrain, labelTrain = traingeneratorOut
+    pairTest, labelTest = validgeneratorOut
+
+
     model = create_model(input_shape=INPUT_SHAPE)
 
     #opt = SGD(learning_rate=0.01, momentum=0.0, nesterov=False)
     opt = Adam(0.001, decay=2.5e-4)
-    model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=["accuracy"])
-
-    traingeneratorOut = create_pair(1, 20, True)
-    validgeneratorOut = create_pair(1, 20, True)
-    pairTrain, labelTrain = traingeneratorOut
-    pairTest, labelTest = validgeneratorOut
+    model.compile(loss='binary_crossentropy', optimizer=opt, metrics=["accuracy"])
 
     
 
+    
+    print(labelTrain[:])
     history = model.fit(
-        [pairTrain[:, 0], pairTrain[:, 1]], labelTrain[:], #NIEKDE TU JE CHYBA
+        [pairTrain[:, 0], pairTrain[:, 1]], labelTrain, 
         validation_data=([pairTrain[:, 0], pairTrain[:, 1]], labelTrain[:]),
         batch_size=BATCH_SIZE,
         epochs=EPOCHS)

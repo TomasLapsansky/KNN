@@ -1,3 +1,6 @@
+import argparse
+import sys
+
 import tensorflow as tf
 import keras
 from keras.models import Sequential
@@ -191,17 +194,30 @@ def create_model(input_shape=(128, 128, 3)):
     return model
 
 
+def parseArgs():
+    parser = argparse.ArgumentParser(description='Directory with captured samples')
+    parser.add_argument('-d', action='store', dest='directory',
+                        help='Directory to captures', default="")
+
+    return parser.parse_args()
+
+
 def main():
     EPOCHS = 50
     BATCH_SIZE = 64
     SPE = 100
     no_output = 2
 
-    print(device_lib.list_local_devices())
+    arguments = parseArgs()
+
+    # tensorflow devices (GPU) print
+    # print(device_lib.list_local_devices())
+
+    print("picka " + arguments.directory)
 
     print("Nacitavam subory...")
-    pathA = "capt/A"
-    pathB = "capt/B"
+    pathA = arguments.directory + "capt/A"
+    pathB = arguments.directory + "capt/B"
     dataset=[x for x in os.listdir(pathA)
                                if os.path.isfile(os.path.join(pathA, x))]  
 
@@ -210,16 +226,9 @@ def main():
      
     print("DONE")
 
-
-    checkpoint_path = os.getcwd()+"checkpoint"
-    if(os.path.isdir(checkpoint_path)):
-        print("Checkpoint dir \""+checkpoint_path+"\" is not directory")
-        exit(1)
-    else:
-        print("Checkpoint dir \""+checkpoint_path+"\" OK")
-
-    
-
+    checkpoint_path = os.getcwd()+"/checkpoint"
+    if not os.path.exists(checkpoint_path):
+        os.mkdir(checkpoint_path)
 
     checkpoint_dir = os.path.dirname(checkpoint_path)
     filepath="weights-improvement-epoch-{epoch:02d}-val-{val_accuracy:.2f}.hdf5"

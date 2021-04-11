@@ -191,7 +191,8 @@ def main():
     SPE = 100
     no_output = 2
 
-    print(device_lib.list_local_devices())
+    # tensorflow gpu
+    # print(device_lib.list_local_devices())
 
     traingeneratorOut = create_pair(1, 2000, True)
     validgeneratorOut = create_pair(1, 1000, True)

@@ -192,7 +192,7 @@ def create_model(input_shape=(128, 128, 3)):
 
 
 def main():
-    EPOCHS = 25
+    EPOCHS = 50
     BATCH_SIZE = 64
     SPE = 100
     no_output = 2
@@ -220,7 +220,7 @@ def main():
     
     history = model.fit(
         [pairTrain[:, 0], pairTrain[:, 1]], labelTrain, 
-        validation_data=([pairTrain[:, 0], pairTrain[:, 1]], labelTrain[:]),
+        validation_data=([pairTest[:, 0], pairTest[:, 1]], labelTest[:]),
         batch_size=BATCH_SIZE,
         epochs=EPOCHS)
 

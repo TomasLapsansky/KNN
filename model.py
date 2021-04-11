@@ -210,7 +210,16 @@ def main():
      
     print("DONE")
 
-    checkpoint_path = "checkpoint/"
+
+    checkpoint_path = os.getcwd()+"checkpoint"
+    if(os.path.isdir(checkpoint_path)):
+        print("Checkpoint dir \""+checkpoint_path+"\" is not directory")
+        exit(1)
+    else:
+        print("Checkpoint dir \""+checkpoint_path+"\" OK")
+
+    
+
 
     checkpoint_dir = os.path.dirname(checkpoint_path)
     filepath="weights-improvement-epoch-{epoch:02d}-val-{val_accuracy:.2f}.hdf5"
@@ -232,7 +241,7 @@ def main():
         validation_data=([pairTest[:, 0], pairTest[:, 1]], labelTest[:]),
         batch_size=BATCH_SIZE,
         epochs=EPOCHS,
-        callbacks=callbacks_list))
+        callbacks=callbacks_list)
 
 
 if __name__ == "__main__":

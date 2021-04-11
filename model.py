@@ -40,7 +40,7 @@ def get_pair(camera, id):
         return "none/none"
 
 
-def create_pair(images, batch_size, positive):
+def create_pair(images, batch_size, positive, dataset, datasetB):
     output = []
 
     pairImg = []
@@ -49,14 +49,6 @@ def create_pair(images, batch_size, positive):
     pathA = "capt/A"
     pathB = "capt/B"
     width, height, rest = INPUT_SHAPE
-    print("Nacitavam subory...")
-    dataset=[x for x in os.listdir(pathA)
-                               if os.path.isfile(os.path.join(pathA, x))]  
-
-    datasetB = [x for x in os.listdir(pathB)
-                                  if os.path.isfile(os.path.join(pathB, x))]
-     
-    print("DONE")
 
     i = 0
     while (i < batch_size):
@@ -206,7 +198,18 @@ def main():
 
     print(device_lib.list_local_devices())
 
-    traingeneratorOut = create_pair(1, 2000, True)
+    print("Nacitavam subory...")
+    pathA = "capt/A"
+    pathB = "capt/B"
+    dataset=[x for x in os.listdir(pathA)
+                               if os.path.isfile(os.path.join(pathA, x))]  
+
+    datasetB = [x for x in os.listdir(pathB)
+                                  if os.path.isfile(os.path.join(pathB, x))]
+     
+    print("DONE")
+
+    traingeneratorOut = create_pair(1, 2000, True, dataset, datasetB)
     validgeneratorOut = create_pair(1, 1000, True)
     pairTrain, labelTrain = traingeneratorOut
     pairTest, labelTest = validgeneratorOut

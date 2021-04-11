@@ -78,7 +78,7 @@ def create_pair(images, batch_size, positive):
         #print("Mam obrazok A",i)
         label = None
         
-        if (random.choice([True,True , True, False])):
+        if (random.choice([True, False])):
             pat = re.compile(r"^"+prefix)
             dir_list = os.listdir(pathB)
             list_name =  [i for i in dir_list if pat.match(i)]          
@@ -197,7 +197,8 @@ def main():
     SPE = 100
     no_output = 2
 
-    print(device_lib.list_local_devices())
+    # tensorflow gpu
+    # print(device_lib.list_local_devices())
 
     traingeneratorOut = create_pair(1, 2000, True)
     validgeneratorOut = create_pair(1, 1000, True)

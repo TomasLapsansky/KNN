@@ -192,8 +192,8 @@ def create_model(input_shape=(128, 128, 3)):
 
 
 def main():
-    EPOCHS = 100
-    BATCH_SIZE = 16
+    EPOCHS = 25
+    BATCH_SIZE = 64
     SPE = 100
     no_output = 2
 

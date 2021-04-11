@@ -29,106 +29,19 @@ import matplotlib.image as mpimg
 import random, os
 from sklearn.model_selection import train_test_split
 
-INPUT_SHAPE = (128, 128, 3)
+import config
+import generator
 
-L1_layer = Lambda(lambda tensor:K.abs(tensor[0] - tensor[1]))
-
-def get_pair(camera, id):
-    try:
-        df = pd.read_csv("pairs/ground_truth_shot_" + str(camera) + ".csv")
-        options = [str(camera) + "A/" + str(id)]
-        pair = str(df[df.camA.str.startswith(tuple(options))]['camB'])
-        return pair.split("_")[0].split('"')[1]
-    except:
-        return "none/none"
-
-
-def create_pair(images, batch_size, positive, dataset, datasetB):
-    output = []
-
-    pairImg = []
-    pairLab = []
-    labels = []
-    pathA = "capt/A"
-    pathB = "capt/B"
-    width, height, rest = INPUT_SHAPE
-
-    i = 0
-    while (i < batch_size):
-        print(i, batch_size, end='\r')
-        
-        image = random.choice(dataset)
-        if (image[1] == "B"):
-            print("Nenasiel som A")
-            continue
-
-        imagelist = image.split("_")
-        pair = get_pair(int(imagelist[0][0]), int(imagelist[2]))
-        if(pair=="none/none"):
-            continue
-        
-        pair = pair.split("/")
-        prefix = pair[0][0] + "B_id_" + pair[1]
-        set_list = []
-        #print("Mam obrazok A",i)
-        label = None
-        
-        if (random.choice([True, False])):
-            pat = re.compile(r"^"+prefix)
-            dir_list = os.listdir(pathB)
-            list_name =  [i for i in dir_list if pat.match(i)]          
-            
-            for file in list_name:
-                
-                if file.startswith(prefix):
-                    set_list.append(file)
-                else:
-                    print("Nemam B")
-
-            if (set_list == []):
-                continue
-
-            img1 = image
-            img2 = random.choice(set_list)
-            label = [1]
-            #print("Mam obrazok B",i)
-
-        else:
-
-            img1 = image
-            img2 = random.choice(datasetB)
-            label = [0]
-            #print("Mam obrazok B",i)
-
-        img1 = cv2.imread(pathA + "/" + img1)
-        img1 = cv2.resize(img1, (width, height))
-
-        img2 = cv2.imread(pathB + "/" + img2)
-        img2 = cv2.resize(img2, (width, height))
-
-       #plt.figure()
-
-       # f, axarr = plt.subplots(2,1) 
-
-# use the created array to output your multiple images. In this case I have stacked 4 images vertically
-       # axarr[0].imshow(img1,cmap="hot")
-       # axarr[1].imshow(img2,cmap="hot")
-       # print(label)
-       # plt.show()
-
-        labels.append(label)
-        output.append([img1, img2])
-
-        i = i + 1
-
-    return (np.array(output), np.array(labels))
+L1_layer = Lambda(lambda tensor: K.abs(tensor[0] - tensor[1]))
 
 
 def initialize_weights(shape, dtype=None):
     return np.random.normal(loc=0.0, scale=1e-2, size=shape)
 
+
 def initialize_bias(shape, dtype=None):
     return np.random.normal(loc=0.5, scale=1e-2, size=shape)
+
 
 def small_vgg(input_shape):
     input1 = Input(input_shape)
@@ -153,22 +66,21 @@ def small_vgg(input_shape):
     x = Flatten()(x)
     x = Dense(512)(x)
 
-    return Model(input1,x)
+    return Model(input1, x)
 
-def create_model(input_shape=(128, 128, 3)):
-    
-    # Vytvorenie malej siete pre siam 
+
+def create_model(input_shape):
+    # Vytvorenie malej siete pre siam
     convnet = small_vgg(input_shape)
 
     # Vytvorenie vstupov
     left_input = Input(input_shape)
     right_input = Input(input_shape)
-    
-    #Auto 1
-    encoded_l = convnet(left_input)
-    #Auto 2
-    encoded_r = convnet(right_input)
 
+    # Auto 1
+    encoded_l = convnet(left_input)
+    # Auto 2
+    encoded_r = convnet(right_input)
 
     L1_distance = L1_layer([encoded_l, encoded_r])
     x = Dense(1024)(L1_distance)
@@ -179,12 +91,12 @@ def create_model(input_shape=(128, 128, 3)):
     x = Dropout(0.2)(x)
     x = Activation('relu')(x)
 
-    prediction = Dense(1,activation='sigmoid')(x)
-    #optimizer = Adam(0.001, decay=2.5e-4)
+    prediction = Dense(1, activation='sigmoid')(x)
+    # optimizer = Adam(0.001, decay=2.5e-4)
     optimizer = SGD(learning_rate=0.0001, momentum=0.4)
 
-    model = Model(inputs=[left_input,right_input],outputs=prediction)
-    model.compile(loss="binary_crossentropy",optimizer=optimizer,metrics=['accuracy'])
+    model = Model(inputs=[left_input, right_input], outputs=prediction)
+    model.compile(loss="binary_crossentropy", optimizer=optimizer, metrics=['accuracy'])
 
     print(model.summary())
     return model
@@ -199,9 +111,9 @@ def parseArgs():
 
     return parser.parse_args()
 
-def my_evaluate(model, img_car1, img_car2):
 
-    width, height, rest = INPUT_SHAPE
+def my_evaluate(model, img_car1, img_car2):
+    width, height, rest = config.INPUT_SHAPE
 
     car1 = cv2.imread(img_car1)
     car1 = cv2.resize(car1, (width, height))
@@ -209,33 +121,26 @@ def my_evaluate(model, img_car1, img_car2):
     car2 = cv2.imread(img_car2)
     car2 = cv2.resize(car2, (width, height))
 
-    resized = [car1,car2]
+    resized = [car1, car2]
 
-    out=list(model.predict(resized))
+    out = list(model.predict(resized))
 
     print(out)
 
 
-
-
-
 def main():
-    EPOCHS = 50
-    BATCH_SIZE = 64
-    SPE = 100
-    no_output = 2
 
     arguments = parseArgs()
 
     # tensorflow devices (GPU) print
     # print(device_lib.list_local_devices())
 
-    model = create_model(input_shape=INPUT_SHAPE)
+    model = create_model(input_shape=config.INPUT_SHAPE)
 
-    if(arguments.checkpoint!=None):
+    if (arguments.checkpoint != None):
         checkpoint = arguments.checkpoint
-        print("Using checkpoint",checkpoint)
-        if(not os.path.exists(checkpoint)):
+        print("Using checkpoint", checkpoint)
+        if (not os.path.exists(checkpoint)):
             print("Checkpoint nenajdeny")
             exit(1)
         model.load_weights(checkpoint)
@@ -244,39 +149,44 @@ def main():
         print("Loading files...")
         pathA = arguments.directory + "capt/A"
         pathB = arguments.directory + "capt/B"
-        dataset=[x for x in os.listdir(pathA)
-                                   if os.path.isfile(os.path.join(pathA, x))]  
+        dataset = [x for x in os.listdir(pathA)
+                   if os.path.isfile(os.path.join(pathA, x))]
 
         datasetB = [x for x in os.listdir(pathB)
-                                      if os.path.isfile(os.path.join(pathB, x))]
-     
+                    if os.path.isfile(os.path.join(pathB, x))]
+
         print("DONE")
 
-        checkpoint_path = os.getcwd()+"/checkpoint"
+        checkpoint_path = os.getcwd() + "/checkpoint"
         if not os.path.exists(checkpoint_path):
             os.mkdir(checkpoint_path)
 
-        checkpoint_dir = os.path.dirname(checkpoint_path)
-        filepath="weights-improvement-epoch-{epoch:02d}-val-{val_accuracy:.2f}.hdf5"
+        filepath = checkpoint_path + "/weights-improvement-epoch-{epoch:02d}-val-{val_accuracy:.2f}.hdf5"
         checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
         callbacks_list = [checkpoint]
 
+        trainGeneratorOut = generator.create_pair(config.BATCH_SIZE, dataset, datasetB)
+        validGeneratorOut = generator.create_pair(config.BATCH_SIZE, dataset, datasetB)
+        # pairTrain, labelTrain = trainGeneratorOut
+        # pairTest, labelTest = validGeneratorOut
 
+        # opt = SGD(learning_rate=0.01, momentum=0.0, nesterov=False)
 
-        traingeneratorOut = create_pair(1, 5000, True, dataset, datasetB)
-        validgeneratorOut = create_pair(1, 1000, True, dataset, datasetB)
-        pairTrain, labelTrain = traingeneratorOut
-        pairTest, labelTest = validgeneratorOut
-        
+        # history = model.fit(
+        #     [pairTrain[:, 0], pairTrain[:, 1]], labelTrain,
+        #     validation_data=([pairTest[:, 0], pairTest[:, 1]], labelTest[:]),
+        #     batch_size=config.BATCH_SIZE,
+        #     epochs=config.EPOCHS,
+        #     callbacks=callbacks_list)
 
-        #opt = SGD(learning_rate=0.01, momentum=0.0, nesterov=False)
-    
         history = model.fit(
-            [pairTrain[:, 0], pairTrain[:, 1]], labelTrain, 
-            validation_data=([pairTest[:, 0], pairTest[:, 1]], labelTest[:]),
-            batch_size=BATCH_SIZE,
-            epochs=EPOCHS,
+            trainGeneratorOut,
+            validation_data=validGeneratorOut,
+            steps_per_epoch=1,
+            epochs=config.EPOCHS,
             callbacks=callbacks_list)
+
+        # my_evaluate(model, img_car1, img_car2)
 
 
 if __name__ == "__main__":

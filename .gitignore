@@ -3,3 +3,5 @@ table.csv
 capt/
 .DS_Store
 .idea/
+__pycache__/
+

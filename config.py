@@ -1,0 +1,5 @@
+INPUT_SHAPE = (128, 128, 3)
+
+EPOCHS = 50
+BATCH_SIZE = 2#64
+SPE = 100   # TODO ic do pici

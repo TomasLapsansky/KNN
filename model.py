@@ -139,6 +139,12 @@ def my_evaluate(model, img_car1, img_car2):
 
 def model_validate(model):
     df = pd.read_csv("dataset/ground_truth_crowdsourced_avg_values.csv")
+    ok = 0
+    nok = 0
+    
+    close = 0
+
+    i=0
     for index, row in df.iterrows():
         imgA = cv2.imread("dataset/" + row['imgA'])
         imgB = cv2.imread("dataset/" + row['imgB'])
@@ -158,8 +164,36 @@ def model_validate(model):
         pathImgB = "dataset/" + row['imgB']
         value = (row['value'] + 1) / 2
         test = float(my_evaluate(model, pathImgA, pathImgB))
-        print("Expected:" ,value, " Result: ", test)
+        print(i,"people:" ,value, " net: ", test)
+
+        if(abs(test-value) < 0.30):
+            close += 1
+
+
+        if(test>0.8):
+            test = 1
+        else:
+            test = 0
+
+        if(value>0.8):
+            value = 1
+        else:
+            value = 0
+
+
+
+        if(round(value)==round(test)):
+            ok +=1
+        else:
+            nok+=1
+        
+        
+        i+=1
         plt.show(block=True) 
+    
+    print("Same",ok/i,"Out",nok/i)
+    print("Close",close,"/",i)
+    print("Close",close/i)
 
 
 

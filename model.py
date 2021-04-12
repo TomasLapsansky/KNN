@@ -147,8 +147,13 @@ def main():
     else:
         print("Start training ")
         print("Loading files...")
-        pathA = arguments.directory + "capt/A"
-        pathB = arguments.directory + "capt/B"
+        
+        arg_dir = arguments.directory
+        if(not arguments.directory == ""):
+            arg_dir = arguments.directory+"/"
+
+        pathA = arg_dir+"capt/A"
+        pathB = arg_dir+"capt/B"
         dataset = [x for x in os.listdir(pathA)
                    if os.path.isfile(os.path.join(pathA, x))]
 

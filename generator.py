@@ -168,7 +168,4 @@ def create_pair_optimized(batch_size, dataset, datasetB):
 
         i += 1
 
-    pairTrain = np.array(output)
-    labelTrain = np.array(labels)
-
-    return [pairTrain[:, 0], pairTrain[:, 1]], labelTrain[:]
+    return (np.array(output), np.array(labels))

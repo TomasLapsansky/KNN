@@ -115,17 +115,40 @@ def parseArgs():
 def my_evaluate(model, img_car1, img_car2):
     width, height, rest = config.INPUT_SHAPE
 
+    # print(width,height)
     car1 = cv2.imread(img_car1)
     car1 = cv2.resize(car1, (width, height))
 
     car2 = cv2.imread(img_car2)
     car2 = cv2.resize(car2, (width, height))
 
-    resized = [car1, car2]
+    
+    plt.imshow(car2)
+    plt.show(block=True) 
 
-    out = list(model.predict(resized))
+    plt.imshow(car1)
+    plt.show(block=True) 
+    
+    car1 = car1[:,:]
+    car2 = car2[:,:]
 
-    print(out)
+    input1=np.array([car1])
+    input2=np.array([car2])
+
+    out = list(model.predict([input1,input2]))
+
+    return out[0]
+
+def model_validate(model):
+    df = pd.read_csv("dataset/ground_truth_crowdsourced_avg_values.csv")
+    for index, row in df.iterrows():
+        # imgA = cv2.imread("dataset/" + row['imgA'])
+        # imgB = cv2.imread("dataset/" + row['imgB'])
+        pathImgA = "dataset/" + row['imgA']
+        pathImgB = "dataset/" + row['imgB']
+        value = (row['value'] + 1) / 2
+        test = float(my_evaluate(model, pathImgA, pathImgB))
+        print("Expected:" ,value, " Result: ", test)
 
 
 def main():
@@ -144,6 +167,8 @@ def main():
             print("Checkpoint nenajdeny")
             exit(1)
         model.load_weights(checkpoint)
+        print("Checkpoint loaded")
+        model_validate(model)
     else:
         print("Start training ")
         print("Loading files...")

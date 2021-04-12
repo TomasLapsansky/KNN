@@ -182,8 +182,9 @@ def main():
         history = model.fit(
             trainGeneratorOut,
             validation_data=validGeneratorOut,
-            steps_per_epoch=1,
+            steps_per_epoch=100,
             epochs=config.EPOCHS,
+            validation_steps=20,
             callbacks=callbacks_list)
 
         # my_evaluate(model, img_car1, img_car2)

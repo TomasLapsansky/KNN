@@ -20,15 +20,15 @@ def get_pair(camera, id):
 
 
 def create_pair(batch_size, dataset, datasetB):
-    output = []
-
-    labels = []
+    
     pathA = "capt/A"
     pathB = "capt/B"
     width, height, rest = config.INPUT_SHAPE
 
     while True:
 
+        output = []
+        labels = []
         i = 0
         while i < batch_size:
             # print(i, batch_size, end='\r')

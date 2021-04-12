@@ -125,11 +125,7 @@ def my_evaluate(model, img_car1, img_car2):
     car2 = cv2.resize(car2, (width, height))
 
     
-    plt.imshow(car2)
-    plt.show(block=True) 
-
-    plt.imshow(car1)
-    plt.show(block=True) 
+    
     
     car1 = car1[:,:]
     car2 = car2[:,:]
@@ -144,13 +140,27 @@ def my_evaluate(model, img_car1, img_car2):
 def model_validate(model):
     df = pd.read_csv("dataset/ground_truth_crowdsourced_avg_values.csv")
     for index, row in df.iterrows():
-        # imgA = cv2.imread("dataset/" + row['imgA'])
-        # imgB = cv2.imread("dataset/" + row['imgB'])
+        imgA = cv2.imread("dataset/" + row['imgA'])
+        imgB = cv2.imread("dataset/" + row['imgB'])
+        
+        
+
+        plt.figure()
+        #subplot(r,c) provide the no. of rows and columns
+        f, axarr = plt.subplots(2,1) 
+
+        # use the created array to output your multiple images. In this case I have stacked 4 images vertically
+        axarr[0].imshow(imgA)
+        axarr[1].imshow(imgB)
+
+       
         pathImgA = "dataset/" + row['imgA']
         pathImgB = "dataset/" + row['imgB']
         value = (row['value'] + 1) / 2
         test = float(my_evaluate(model, pathImgA, pathImgB))
         print("Expected:" ,value, " Result: ", test)
+        plt.show(block=True) 
+
 
 
 def main():

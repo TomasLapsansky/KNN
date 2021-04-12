@@ -177,10 +177,11 @@ def main():
             pairTest, labelTest = generator.create_pair_optimized(config.BATCH_SIZE * config.SPE, dataset, datasetB)
 
             history = model.fit(
-                [pairTrain[:, 0], pairTrain[:, 1]], labelTrain[:],
+                [pairTrain[:, 0], pairTrain[:, 1]], labelTrain,
                 validation_data=([pairTest[:, 0], pairTest[:, 1]], labelTest[:]),
                 batch_size=config.BATCH_SIZE,
                 epochs=config.EPOCHS,
+                validation_steps=config.VSTEPS,
                 callbacks=callbacks_list)
 
         else:
@@ -192,7 +193,7 @@ def main():
                 validation_data=validGeneratorOut,
                 steps_per_epoch=config.SPE,
                 epochs=config.EPOCHS,
-                validation_steps=20,
+                validation_steps=config.VSTEPS,
                 callbacks=callbacks_list)
 
         # opt = SGD(learning_rate=0.01, momentum=0.0, nesterov=False)

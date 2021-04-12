@@ -174,7 +174,7 @@ def main():
 
         if (arguments.optimized):
             pairTrain, labelTrain = generator.create_pair_optimized(config.BATCH_SIZE * config.SPE, dataset, datasetB)
-            pairTest, labelTest = generator.create_pair_optimized(config.BATCH_SIZE * config.SPE, dataset, datasetB)
+            pairTest, labelTest = generator.create_pair_optimized(config.BATCH_SIZE * config.VSTEPS, dataset, datasetB)
 
             history = model.fit(
                 [pairTrain[:, 0], pairTrain[:, 1]], labelTrain,

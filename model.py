@@ -108,6 +108,8 @@ def parseArgs():
                         help='Directory to captures', default="")
     parser.add_argument('-c', action='store', dest='checkpoint',
                         help='Checkpoint file', default=None)
+    parser.add_argument('-o', action='store_true', dest='optimized',
+                        help='Optimized file loading for large RAM', default=False)
 
     return parser.parse_args()
 
@@ -170,27 +172,30 @@ def main():
         checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
         callbacks_list = [checkpoint]
 
-        trainGeneratorOut = generator.create_pair(config.BATCH_SIZE, dataset, datasetB)
-        validGeneratorOut = generator.create_pair(config.BATCH_SIZE, dataset, datasetB)
-        # pairTrain, labelTrain = trainGeneratorOut
-        # pairTest, labelTest = validGeneratorOut
+        if (arguments.optimized):
+            pairTrain, labelTrain = generator.create_pair_optimized(config.BATCH_SIZE * config.SPE, dataset, datasetB)
+            pairTest, labelTest = generator.create_pair_optimized(config.BATCH_SIZE * config.SPE, dataset, datasetB)
+
+            history = model.fit(
+                [pairTrain[:, 0], pairTrain[:, 1]], labelTrain[:],
+                validation_data=([pairTest[:, 0], pairTest[:, 1]], labelTest[:]),
+                batch_size=config.BATCH_SIZE,
+                epochs=config.EPOCHS,
+                callbacks=callbacks_list)
+
+        else:
+            trainGeneratorOut = generator.create_pair(config.BATCH_SIZE, dataset, datasetB)
+            validGeneratorOut = generator.create_pair(config.BATCH_SIZE, dataset, datasetB)
+
+            history = model.fit(
+                trainGeneratorOut,
+                validation_data=validGeneratorOut,
+                steps_per_epoch=config.SPE,
+                epochs=config.EPOCHS,
+                validation_steps=20,
+                callbacks=callbacks_list)
 
         # opt = SGD(learning_rate=0.01, momentum=0.0, nesterov=False)
-
-        # history = model.fit(
-        #     [pairTrain[:, 0], pairTrain[:, 1]], labelTrain,
-        #     validation_data=([pairTest[:, 0], pairTest[:, 1]], labelTest[:]),
-        #     batch_size=config.BATCH_SIZE,
-        #     epochs=config.EPOCHS,
-        #     callbacks=callbacks_list)
-
-        history = model.fit(
-            trainGeneratorOut,
-            validation_data=validGeneratorOut,
-            steps_per_epoch=100,
-            epochs=config.EPOCHS,
-            validation_steps=20,
-            callbacks=callbacks_list)
 
         # my_evaluate(model, img_car1, img_car2)
 

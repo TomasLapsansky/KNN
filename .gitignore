@@ -5,4 +5,4 @@ capt/
 .idea/
 __pycache__/
 capt.zip
-checkpoint/
+models/

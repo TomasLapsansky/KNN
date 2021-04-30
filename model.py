@@ -3,6 +3,7 @@ import sys
 
 import tensorflow as tf
 import keras
+from keras.applications.resnet import ResNet50
 from keras.models import Sequential
 from tensorflow.keras import layers
 from tensorflow.python.client import device_lib
@@ -102,11 +103,18 @@ def create_model(input_shape):
     return model
 
 
+def create_backbone():
+    model = ResNet50(weights="imagenet", include_top=False,
+                     input_tensor=Input(shape=(224, 224, 3)))
+
+    return model
+
+
 def parseArgs():
     parser = argparse.ArgumentParser(description='Directory with captured samples')
     parser.add_argument('-d', action='store', dest='directory',
                         help='Directory to captures', default="")
-    parser.add_argument('-c', action='store', dest='checkpoint',
+    parser.add_argument('-c', action='store', dest='models',
                         help='Checkpoint file', default=None)
     parser.add_argument('-o', action='store_true', dest='optimized',
                         help='Optimized file loading for large RAM', default=False)
@@ -124,81 +132,70 @@ def my_evaluate(model, img_car1, img_car2):
     car2 = cv2.imread(img_car2)
     car2 = cv2.resize(car2, (width, height))
 
-    
-    
-    
-    car1 = car1[:,:]
-    car2 = car2[:,:]
+    car1 = car1[:, :]
+    car2 = car2[:, :]
 
-    input1=np.array([car1])
-    input2=np.array([car2])
+    input1 = np.array([car1])
+    input2 = np.array([car2])
 
-    out = list(model.predict([input1,input2]))
+    out = list(model.predict([input1, input2]))
 
     return out[0]
+
 
 def model_validate(model):
     df = pd.read_csv("dataset/ground_truth_crowdsourced_avg_values.csv")
     ok = 0
     nok = 0
-    
+
     close = 0
 
-    i=0
+    i = 0
     for index, row in df.iterrows():
         imgA = cv2.imread("dataset/" + row['imgA'])
         imgB = cv2.imread("dataset/" + row['imgB'])
-        
-        
 
         plt.figure()
-        #subplot(r,c) provide the no. of rows and columns
-        f, axarr = plt.subplots(2,1) 
+        # subplot(r,c) provide the no. of rows and columns
+        f, axarr = plt.subplots(2, 1)
 
         # use the created array to output your multiple images. In this case I have stacked 4 images vertically
         axarr[0].imshow(imgA)
         axarr[1].imshow(imgB)
 
-       
         pathImgA = "dataset/" + row['imgA']
         pathImgB = "dataset/" + row['imgB']
         value = (row['value'] + 1) / 2
         test = float(my_evaluate(model, pathImgA, pathImgB))
-        print(i,"people:" ,value, " net: ", test)
+        print(i, "people:", value, " net: ", test)
 
-        if(abs(test-value) < 0.30):
+        if (abs(test - value) < 0.30):
             close += 1
 
-
-        if(test>0.8):
+        if (test > 0.8):
             test = 1
         else:
             test = 0
 
-        if(value>0.8):
+        if (value > 0.8):
             value = 1
         else:
             value = 0
 
-
-
-        if(round(value)==round(test)):
-            ok +=1
+        if (round(value) == round(test)):
+            ok += 1
         else:
-            nok+=1
-        
-        
-        i+=1
-        plt.show(block=True) 
-    
-    print("Same",ok/i,"Out",nok/i)
-    print("Close",close,"/",i)
-    print("Close",close/i)
+            nok += 1
 
+        i += 1
+        plt.show(block=True)
+
+    print("Same", ok / i, "Out", nok / i)
+    print("Close", close, "/", i)
+    print("Close", close / i)
 
 
 def main():
-
     arguments = parseArgs()
 
     # tensorflow devices (GPU) print
@@ -208,7 +205,7 @@ def main():
 
     if (arguments.checkpoint != None):
         checkpoint = arguments.checkpoint
-        print("Using checkpoint", checkpoint)
+        print("Using models", checkpoint)
         if (not os.path.exists(checkpoint)):
             print("Checkpoint nenajdeny")
             exit(1)
@@ -218,13 +215,13 @@ def main():
     else:
         print("Start training ")
         print("Loading files...")
-        
-        arg_dir = arguments.directory
-        if(not arguments.directory == ""):
-            arg_dir = arguments.directory+"/"
 
-        pathA = arg_dir+"capt/A"
-        pathB = arg_dir+"capt/B"
+        arg_dir = arguments.directory
+        if (not arguments.directory == ""):
+            arg_dir = arguments.directory + "/"
+
+        pathA = arg_dir + "capt/A"
+        pathB = arg_dir + "capt/B"
         dataset = [x for x in os.listdir(pathA)
                    if os.path.isfile(os.path.join(pathA, x))]
 
@@ -233,7 +230,7 @@ def main():
 
         print("DONE")
 
-        checkpoint_path = os.getcwd() + "/checkpoint"
+        checkpoint_path = os.getcwd() + "/models"
         if not os.path.exists(checkpoint_path):
             os.mkdir(checkpoint_path)
 
@@ -271,4 +268,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    model = create_backbone()
+    model.summary()

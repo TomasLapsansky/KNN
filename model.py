@@ -4,263 +4,145 @@ import sys
 import tensorflow as tf
 import keras
 from keras.applications.resnet import ResNet50
-from keras.models import Sequential
-from tensorflow.keras import layers
-from tensorflow.python.client import device_lib
 from keras.layers import Dense, Activation, Conv2D, Flatten, MaxPooling2D, Dropout, Input
-from keras.layers import Dense
-from keras.layers.normalization import BatchNormalization
-from keras import Model
-from keras import optimizers
-from keras.preprocessing.image import ImageDataGenerator
-from keras.optimizers import Adam, SGD
 from keras.callbacks import ModelCheckpoint
-from tensorflow.keras import regularizers
-from keras.layers.core import Lambda
-from keras.regularizers import l2
-from keras.optimizers import Adam
-import numpy as np
 from keras import backend as K
-import pandas as pd
-import cv2
-import re
-import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
+import xml.etree.ElementTree as ET
 
-import random, os
-from sklearn.model_selection import train_test_split
+import os
 
 import config
 import generator
 
-L1_layer = Lambda(lambda tensor: K.abs(tensor[0] - tensor[1]))
+SN = 3
+PN = 24
+identity_num = 751
 
 
-def initialize_weights(shape, dtype=None):
-    return np.random.normal(loc=0.0, scale=1e-2, size=shape)
+# def create_model_old(input_shape):
+#     # Vytvorenie malej siete pre siam
+#
+#     # Vytvorenie vstupov
+#     left_input = Input(input_shape)
+#     right_input = Input(input_shape)
+#
+#     # Auto 1
+#     encoded_l = convnet(left_input)
+#     # Auto 2
+#     encoded_r = convnet(right_input)
+#
+#     L1_distance = L1_layer([encoded_l, encoded_r])
+#     x = Dense(1024)(L1_distance)
+#     x = Dropout(0.2)(x)
+#     x = Dense(512)(x)
+#     x = Dropout(0.2)(x)
+#     x = Dense(256)(x)
+#     x = Dropout(0.2)(x)
+#     x = Activation('relu')(x)
+#
+#     prediction = Dense(1, activation='sigmoid')(x)
+#     # optimizer = Adam(0.001, decay=2.5e-4)
+#     optimizer = SGD(learning_rate=0.0001, momentum=0.4)
+#
+#     model = Model(inputs=[left_input, right_input], outputs=prediction)
+#     model.compile(loss="binary_crossentropy", optimizer=optimizer, metrics=['accuracy'])
+#
+#     print(model.summary())
+#     return model
+
+# https://github.com/michuanhaohao/keras_reid/blob/master/reid_tripletcls.py
+def triplet_hard_loss(y_true, y_pred):
+    global SN
+    global PN
+    feat_num = SN * PN  # images num
+    y_pred = K.l2_normalize(y_pred, axis=1)
+    feat1 = K.tile(K.expand_dims(y_pred, axis=0), [feat_num, 1, 1])
+    feat2 = K.tile(K.expand_dims(y_pred, axis=1), [1, feat_num, 1])
+    delta = feat1 - feat2
+    dis_mat = K.sum(K.square(delta), axis=2) + K.epsilon()  # Avoid gradients becoming NAN
+    dis_mat = K.sqrt(dis_mat)
+    positive = dis_mat[0:SN, 0:SN]
+    negetive = dis_mat[0:SN, SN:]
+    for i in range(1, PN):
+        positive = tf.concat([positive, dis_mat[i * SN:(i + 1) * SN, i * SN:(i + 1) * SN]], axis=0)
+        if i != PN - 1:
+            negs = tf.concat([dis_mat[i * SN:(i + 1) * SN, 0:i * SN], dis_mat[i * SN:(i + 1) * SN, (i + 1) * SN:]],
+                             axis=1)
+        else:
+            negs = tf.concat(dis_mat[i * SN:(i + 1) * SN, 0:i * SN], axis=0)
+        negetive = tf.concat([negetive, negs], axis=0)
+    positive = K.max(positive, axis=1)
+    negetive = K.min(negetive, axis=1)
+    a1 = 0.6
+    loss = K.mean(K.maximum(0.0, positive - negetive + a1))
+    return loss
 
 
-def initialize_bias(shape, dtype=None):
-    return np.random.normal(loc=0.5, scale=1e-2, size=shape)
-
-
-def small_vgg(input_shape):
-    input1 = Input(input_shape)
-    x = Conv2D(64, (3, 3), activation='relu', padding='same', name='block1_conv1')(input1)
-
-    # Block 1
-    x = MaxPooling2D((2, 2), strides=(2, 2), name='block1_pool')(x)
-
-    # Block 2
-    x = Conv2D(128, (3, 3), activation='relu', padding='same', name='block2_conv1')(x)
-    x = MaxPooling2D((2, 2), strides=(2, 2), name='block2_pool')(x)
-    x = Conv2D(128, (3, 3), activation='relu', padding='same', name='block2_conv2')(x)
-    x = MaxPooling2D((2, 2), strides=(2, 2), name='block3_pool')(x)
-
-    # Block 3
-    x = Conv2D(256, (3, 3), activation='relu', padding='same', name='block3_conv1')(x)
-    x = MaxPooling2D((2, 2), strides=(2, 2), name='block4_pool')(x)
-
-    x = Conv2D(512, (3, 3), activation='relu', padding='same', name='block4_conv1')(x)
-    x = MaxPooling2D((2, 2), strides=(2, 2), name='block5_pool')(x)
-
-    x = Flatten()(x)
-    x = Dense(512)(x)
-
-    return Model(input1, x)
-
-
-def create_model(input_shape):
-    # Vytvorenie malej siete pre siam
-    convnet = small_vgg(input_shape)
-
-    # Vytvorenie vstupov
-    left_input = Input(input_shape)
-    right_input = Input(input_shape)
-
-    # Auto 1
-    encoded_l = convnet(left_input)
-    # Auto 2
-    encoded_r = convnet(right_input)
-
-    L1_distance = L1_layer([encoded_l, encoded_r])
-    x = Dense(1024)(L1_distance)
-    x = Dropout(0.2)(x)
-    x = Dense(512)(x)
-    x = Dropout(0.2)(x)
-    x = Dense(256)(x)
-    x = Dropout(0.2)(x)
-    x = Activation('relu')(x)
-
-    prediction = Dense(1, activation='sigmoid')(x)
-    # optimizer = Adam(0.001, decay=2.5e-4)
-    optimizer = SGD(learning_rate=0.0001, momentum=0.4)
-
-    model = Model(inputs=[left_input, right_input], outputs=prediction)
-    model.compile(loss="binary_crossentropy", optimizer=optimizer, metrics=['accuracy'])
-
-    print(model.summary())
-    return model
-
-
-def create_backbone():
+def create_model():
     model = ResNet50(weights="imagenet", include_top=False,
-                     input_tensor=Input(shape=(224, 224, 3)))
+                     input_tensor=Input(shape=config.INPUT_SHAPE))
 
     return model
-
-
-def parseArgs():
-    parser = argparse.ArgumentParser(description='Directory with captured samples')
-    parser.add_argument('-d', action='store', dest='directory',
-                        help='Directory to captures', default="")
-    parser.add_argument('-c', action='store', dest='models',
-                        help='Checkpoint file', default=None)
-    parser.add_argument('-o', action='store_true', dest='optimized',
-                        help='Optimized file loading for large RAM', default=False)
-
-    return parser.parse_args()
-
-
-def my_evaluate(model, img_car1, img_car2):
-    width, height, rest = config.INPUT_SHAPE
-
-    # print(width,height)
-    car1 = cv2.imread(img_car1)
-    car1 = cv2.resize(car1, (width, height))
-
-    car2 = cv2.imread(img_car2)
-    car2 = cv2.resize(car2, (width, height))
-
-    car1 = car1[:, :]
-    car2 = car2[:, :]
-
-    input1 = np.array([car1])
-    input2 = np.array([car2])
-
-    out = list(model.predict([input1, input2]))
-
-    return out[0]
-
-
-def model_validate(model):
-    df = pd.read_csv("dataset/ground_truth_crowdsourced_avg_values.csv")
-    ok = 0
-    nok = 0
-
-    close = 0
-
-    i = 0
-    for index, row in df.iterrows():
-        imgA = cv2.imread("dataset/" + row['imgA'])
-        imgB = cv2.imread("dataset/" + row['imgB'])
-
-        plt.figure()
-        # subplot(r,c) provide the no. of rows and columns
-        f, axarr = plt.subplots(2, 1)
-
-        # use the created array to output your multiple images. In this case I have stacked 4 images vertically
-        axarr[0].imshow(imgA)
-        axarr[1].imshow(imgB)
-
-        pathImgA = "dataset/" + row['imgA']
-        pathImgB = "dataset/" + row['imgB']
-        value = (row['value'] + 1) / 2
-        test = float(my_evaluate(model, pathImgA, pathImgB))
-        print(i, "people:", value, " net: ", test)
-
-        if (abs(test - value) < 0.30):
-            close += 1
-
-        if (test > 0.8):
-            test = 1
-        else:
-            test = 0
-
-        if (value > 0.8):
-            value = 1
-        else:
-            value = 0
-
-        if (round(value) == round(test)):
-            ok += 1
-        else:
-            nok += 1
-
-        i += 1
-        plt.show(block=True)
-
-    print("Same", ok / i, "Out", nok / i)
-    print("Close", close, "/", i)
-    print("Close", close / i)
 
 
 def main():
-    arguments = parseArgs()
-
     # tensorflow devices (GPU) print
     # print(device_lib.list_local_devices())
 
-    model = create_model(input_shape=config.INPUT_SHAPE)
+    model = create_model()
 
-    if (arguments.checkpoint != None):
-        checkpoint = arguments.checkpoint
-        print("Using models", checkpoint)
-        if (not os.path.exists(checkpoint)):
-            print("Checkpoint nenajdeny")
-            exit(1)
-        model.load_weights(checkpoint)
-        print("Checkpoint loaded")
-        model_validate(model)
+    print('loading data...')
+    with open(config.VERI_DATASET + 'train_label.xml', 'r') as f:
+        ef = ET.fromstring(f.read())
+
+    print(ef)
+
+    exit(1)
+
+    print("Start training ")
+    print("Loading files...")
+
+    pathA = "capt/A"
+    pathB = "capt/B"
+    dataset = [x for x in os.listdir(pathA)
+               if os.path.isfile(os.path.join(pathA, x))]
+
+    datasetB = [x for x in os.listdir(pathB)
+                if os.path.isfile(os.path.join(pathB, x))]
+
+    print("DONE")
+
+    checkpoint_path = os.getcwd() + "/models"
+    if not os.path.exists(checkpoint_path):
+        os.mkdir(checkpoint_path)
+
+    filepath = checkpoint_path + "/weights-improvement-epoch-{epoch:02d}-val-{val_accuracy:.2f}.hdf5"
+    checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
+    callbacks_list = [checkpoint]
+
+    if (arguments.optimized):
+        pairTrain, labelTrain = generator.create_pair_optimized(config.BATCH_SIZE * config.SPE, dataset, datasetB)
+        pairTest, labelTest = generator.create_pair_optimized(config.BATCH_SIZE * config.VSTEPS, dataset, datasetB)
+
+        history = model.fit(
+            [pairTrain[:, 0], pairTrain[:, 1]], labelTrain,
+            validation_data=([pairTest[:, 0], pairTest[:, 1]], labelTest[:]),
+            batch_size=config.BATCH_SIZE,
+            epochs=config.EPOCHS,
+            validation_steps=config.VSTEPS,
+            callbacks=callbacks_list)
+
     else:
-        print("Start training ")
-        print("Loading files...")
+        trainGeneratorOut = generator.create_pair(config.BATCH_SIZE, dataset, datasetB)
+        validGeneratorOut = generator.create_pair(config.BATCH_SIZE, dataset, datasetB)
 
-        arg_dir = arguments.directory
-        if (not arguments.directory == ""):
-            arg_dir = arguments.directory + "/"
-
-        pathA = arg_dir + "capt/A"
-        pathB = arg_dir + "capt/B"
-        dataset = [x for x in os.listdir(pathA)
-                   if os.path.isfile(os.path.join(pathA, x))]
-
-        datasetB = [x for x in os.listdir(pathB)
-                    if os.path.isfile(os.path.join(pathB, x))]
-
-        print("DONE")
-
-        checkpoint_path = os.getcwd() + "/models"
-        if not os.path.exists(checkpoint_path):
-            os.mkdir(checkpoint_path)
-
-        filepath = checkpoint_path + "/weights-improvement-epoch-{epoch:02d}-val-{val_accuracy:.2f}.hdf5"
-        checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
-        callbacks_list = [checkpoint]
-
-        if (arguments.optimized):
-            pairTrain, labelTrain = generator.create_pair_optimized(config.BATCH_SIZE * config.SPE, dataset, datasetB)
-            pairTest, labelTest = generator.create_pair_optimized(config.BATCH_SIZE * config.VSTEPS, dataset, datasetB)
-
-            history = model.fit(
-                [pairTrain[:, 0], pairTrain[:, 1]], labelTrain,
-                validation_data=([pairTest[:, 0], pairTest[:, 1]], labelTest[:]),
-                batch_size=config.BATCH_SIZE,
-                epochs=config.EPOCHS,
-                validation_steps=config.VSTEPS,
-                callbacks=callbacks_list)
-
-        else:
-            trainGeneratorOut = generator.create_pair(config.BATCH_SIZE, dataset, datasetB)
-            validGeneratorOut = generator.create_pair(config.BATCH_SIZE, dataset, datasetB)
-
-            history = model.fit(
-                trainGeneratorOut,
-                validation_data=validGeneratorOut,
-                steps_per_epoch=config.SPE,
-                epochs=config.EPOCHS,
-                validation_steps=config.VSTEPS,
-                callbacks=callbacks_list)
+        history = model.fit(
+            trainGeneratorOut,
+            validation_data=validGeneratorOut,
+            steps_per_epoch=config.SPE,
+            epochs=config.EPOCHS,
+            validation_steps=config.VSTEPS,
+            callbacks=callbacks_list)
 
         # opt = SGD(learning_rate=0.01, momentum=0.0, nesterov=False)
 
@@ -268,6 +150,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # main()
-    model = create_backbone()
-    model.summary()
+    main()

@@ -7,7 +7,14 @@ from keras.applications.resnet import ResNet50
 from keras.layers import Dense, Activation, Conv2D, Flatten, MaxPooling2D, Dropout, Input
 from keras.callbacks import ModelCheckpoint
 from keras import backend as K
+from keras.optimizers import Adam
+
+
 import xml.etree.ElementTree as ET
+
+import cv2
+
+import pandas as pd
 
 import os
 
@@ -50,6 +57,10 @@ identity_num = 751
 #     print(model.summary())
 #     return model
 
+# TRENOVANIE A VYTVORENIE SETU
+# https://github.com/noelcodella/tripletloss-keras-tensorflow/blob/master/tripletloss.py
+
+
 # https://github.com/michuanhaohao/keras_reid/blob/master/reid_tripletcls.py
 def triplet_hard_loss(y_true, y_pred):
     global SN
@@ -82,6 +93,9 @@ def create_model():
     model = ResNet50(weights="imagenet", include_top=False,
                      input_tensor=Input(shape=config.INPUT_SHAPE))
 
+    opt = Adam(0.001, decay=2.5e-4)
+    model.compile(loss=triplet_hard_loss, optimizer=opt, metrics=['accuracy'])
+
     return model
 
 
@@ -90,12 +104,43 @@ def main():
     # print(device_lib.list_local_devices())
 
     model = create_model()
+    #print(model.summary())
 
-    print('loading data...')
-    with open(config.VERI_DATASET + 'train_label.xml', 'r') as f:
-        ef = ET.fromstring(f.read())
 
-    print(ef)
+
+########################################## NACITAVANIE XML
+    print('loading label xml...')
+    
+    xml_data = open(config.VERI_DATASET + 'train_label.xml', 'r').read()  # Read file
+    root = ET.XML(xml_data) 
+
+    data = []
+    cols = []
+    items=root[0]
+    
+    for i, item in enumerate(items):
+        print(item.attrib['imageName'], end=" ")
+        print(item.attrib['vehicleID'], end=" ")
+        print(item.attrib['cameraID'], end=" ")
+        print(item.attrib['colorID'], end=" ")
+        print(item.attrib['typeID'])
+        
+        data.append([item.attrib['imageName'],item.attrib['vehicleID']])
+        
+
+        #data.append([subchild.text for subchild in child])
+        #cols.append(child.tag)
+        
+    
+    
+
+    df = pd.DataFrame(data)  # Write in DF and transpose it
+    df.columns = ["imageName", "vehicleID"]  # Update column names
+    print(df)
+##########################################
+
+
+
 
     exit(1)
 
@@ -144,7 +189,7 @@ def main():
             validation_steps=config.VSTEPS,
             callbacks=callbacks_list)
 
-        # opt = SGD(learning_rate=0.01, momentum=0.0, nesterov=False)
+        # 
 
         # my_evaluate(model, img_car1, img_car2)
 

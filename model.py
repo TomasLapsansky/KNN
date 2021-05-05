@@ -161,15 +161,12 @@ def main():
 
     gen = generator.MyGenerator(path, batch, lenitem)
     
-    
 
     for epoch in range(1,5):
 
         print ('Epoch ' + str(epoch), lenitem / batch) 
 
         model.fit_generator(generator=gen.dataCarGenerator(), steps_per_epoch=len(gen.Y_train)/epoch , epochs=1, shuffle=False, use_multiprocessing=True)
-
-
 
     exit(0)
 

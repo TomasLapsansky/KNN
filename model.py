@@ -11,10 +11,11 @@ from keras.optimizers import Adam
 
 
 
+
 from keras.preprocessing.image import ImageDataGenerator
 
 import xml.etree.ElementTree as ET
-
+import numpy as np
 
 import cv2
 import matplotlib.pyplot as plt
@@ -78,7 +79,7 @@ datagen = ImageDataGenerator(width_shift_range=0.05,
 
 
 T_G_HEIGHT,T_G_WIDTH = 224, 224
-
+T_G_SEED = 1337
 
 def triplet_hard_loss(y_true, y_pred):
     global SN
@@ -159,9 +160,12 @@ def load_img(p2f):
 def createSet(df, batch_size):
     
     batch = []
+    anchor =   []
+    positive = []
+    negative = []
     dirc=config.VERI_DATASET+"image_train/"
 
-    for i in range(16):
+    for i in range(batch_size):
         # Load random sample from data frame
         row = df.sample()          
 
@@ -175,23 +179,18 @@ def createSet(df, batch_size):
         # Load car ID and image name for negative
         negative_row = (df.loc[df['vehicleID'] != car_A]).sample()
         car_N, name_N = negative_row['vehicleID'].values[0], negative_row['imageName'].values[0]
-        
-        print("A:",car_A, name_A)
-        print("P:",car_P, name_P)
-        print("N:",car_N, name_N)
-        
-        
+
+
 
         img_A = load_img(dirc+name_A)
         img_P = load_img(dirc+name_P)
         img_N = load_img(dirc+name_N)
 
-        batch.append([img_A,img_P,img_N])
+        anchor.append(img_A)
+        positive.append(img_P)
+        negative.append(img_N)
 
-
-
-
-    return batch
+    return np.array(anchor), np.array(positive), np.array(negative)
 
 def main():
     # tensorflow devices (GPU) print
@@ -203,15 +202,21 @@ def main():
     df=loadXML()
     #print(df)
     
+    batch = 16
     dir_name = ""
-    batch = createSet(df,dir_name)
 
-    print(batch[0][0])
+    for epoch in range(100):
+
+        anchor, positive, negative = createSet(df,batch)
+        Y_train = np.random.randint(2, size=(1,2,anchor.shape[0])).T
+
+        model.fit_generator(generator=dataCarGenerator(anchor,positive,negative,Y_train,batch), steps_per_epoch=len(Y_train) / batch, epochs=1, shuffle=False, use_multiprocessing=True)
+
+    
 
     exit(0)
 
-    model.fit_generator(generator=dataCarGenerator(anchors_t,positives_t,negatives_t,Y_train,batch), steps_per_epoch=len(Y_train) / batch, epochs=1, shuffle=False, use_multiprocessing=True)
-
+    
     
 
     

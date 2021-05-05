@@ -8,8 +8,9 @@ from keras.layers import Dense, Activation, Conv2D, Flatten, MaxPooling2D, Dropo
 from keras.callbacks import ModelCheckpoint
 from keras import backend as K
 from keras.optimizers import Adam
+from keras.models import Model
 
-
+import keras.layers as kl
 
 
 from keras.preprocessing.image import ImageDataGenerator
@@ -108,13 +109,55 @@ def triplet_hard_loss(y_true, y_pred):
     return loss
 
 
-def create_model():
-    print('Creating a model ...')
-    model = ResNet50(weights="imagenet", include_top=False,
-                     input_tensor=Input(shape=config.INPUT_SHAPE))
+def euclidean_distance(vects):
+    x, y = vects
+    return K.sqrt(K.maximum(K.sum(K.square(x - y), axis=1, keepdims=True), K.epsilon()))
 
-    opt = Adam(0.001, decay=2.5e-4)
-    model.compile(loss=triplet_hard_loss, optimizer=opt, metrics=['accuracy'])
+def accuracy(y_true, y_pred):
+    return K.mean(y_pred[:,0,0] < y_pred[:,1,0])
+
+def create_model():
+
+    emb_size = 16
+
+    print('Creating a model ...')
+
+     # Initialize a ResNet50_ImageNet Model
+    resnet_input = kl.Input(shape=config.INPUT_SHAPE)
+    resnet_model = keras.applications.resnet50.ResNet50(weights='imagenet', include_top = False, input_tensor=resnet_input)
+
+    # New Layers over ResNet50
+    net = resnet_model.output
+    #net = kl.Flatten(name='flatten')(net)
+    net = kl.GlobalAveragePooling2D(name='gap')(net)
+    #net = kl.Dropout(0.5)(net)
+    net = kl.Dense(emb_size,activation='relu',name='t_emb_1')(net)
+    net = kl.Lambda(lambda  x: K.l2_normalize(x,axis=1), name='t_emb_1_l2norm')(net)
+
+    # model creation
+    base_model = Model(resnet_model.input, net, name="base_model")
+
+    # triplet framework, shared weights
+    input_shape=config.INPUT_SHAPE
+    input_anchor = kl.Input(shape=input_shape, name='input_anchor')
+    input_positive = kl.Input(shape=input_shape, name='input_pos')
+    input_negative = kl.Input(shape=input_shape, name='input_neg')
+
+    net_anchor = base_model(input_anchor)
+    net_positive = base_model(input_positive)
+    net_negative = base_model(input_negative)
+
+    # The Lamda layer produces output using given function. Here its Euclidean distance.
+    positive_dist = kl.Lambda(euclidean_distance, name='pos_dist')([net_anchor, net_positive])
+    negative_dist = kl.Lambda(euclidean_distance, name='neg_dist')([net_anchor, net_negative])
+    tertiary_dist = kl.Lambda(euclidean_distance, name='ter_dist')([net_positive, net_negative])
+
+    # This lambda layer simply stacks outputs so both distances are available to the objective
+    stacked_dists = kl.Lambda(lambda vects: K.stack(vects, axis=1), name='stacked_dists')([positive_dist, negative_dist, tertiary_dist])
+
+    model = Model([input_anchor, input_positive, input_negative], stacked_dists, name='triple_siamese')
+    
+    model.compile(loss=triplet_hard_loss, metrics=[accuracy])
 
     return model
 
@@ -146,7 +189,7 @@ def dataCarGenerator(X1, X2, X3, Y, b):
             X1i = genX1.next()
             X2i = genX2.next()
             X3i = genX3.next()
-
+            print(np.array([X1i[0], X2i[0], X3i[0]]).shape)
             yield [X1i[0], X2i[0], X3i[0]], X1i[1]
 
 def load_img(p2f):
@@ -202,12 +245,15 @@ def main():
     df=loadXML()
     #print(df)
     
-    batch = 16
+    size_batch = 64
+    batch= 16
     dir_name = ""
+    print("\n"*5)
+    print("SPUSTAM TRENOVANIE")
 
     for epoch in range(100):
 
-        anchor, positive, negative = createSet(df,batch)
+        anchor, positive, negative = createSet(df,size_batch)
         Y_train = np.random.randint(2, size=(1,2,anchor.shape[0])).T
 
         model.fit_generator(generator=dataCarGenerator(anchor,positive,negative,Y_train,batch), steps_per_epoch=len(Y_train) / batch, epochs=1, shuffle=False, use_multiprocessing=True)

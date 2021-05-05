@@ -279,7 +279,7 @@ def main():
 
         
 
-        #model.fit_generator(generator=dataCarGenerator(anchor,positive,negative,Y_train,batch), steps_per_epoch=5, epochs=1, shuffle=False, use_multiprocessing=True)
+        model.fit_generator(generator=dataCarGenerator(anchor,positive,negative,Y_train,batch), steps_per_epoch=5, epochs=1, shuffle=False, use_multiprocessing=True)
 
     
 

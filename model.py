@@ -10,9 +10,14 @@ from keras import backend as K
 from keras.optimizers import Adam
 
 
+
+from keras.preprocessing.image import ImageDataGenerator
+
 import xml.etree.ElementTree as ET
 
+
 import cv2
+import matplotlib.pyplot as plt
 
 import pandas as pd
 
@@ -62,6 +67,19 @@ identity_num = 751
 
 
 # https://github.com/michuanhaohao/keras_reid/blob/master/reid_tripletcls.py
+
+
+#Global pre generatory
+datagen = ImageDataGenerator(width_shift_range=0.05,
+                                 height_shift_range=0.05,
+                                 zoom_range=0.1,
+                                 vertical_flip=True,
+                                )
+
+
+T_G_HEIGHT,T_G_WIDTH = 224, 224
+
+
 def triplet_hard_loss(y_true, y_pred):
     global SN
     global PN
@@ -90,6 +108,7 @@ def triplet_hard_loss(y_true, y_pred):
 
 
 def create_model():
+    print('Creating a model ...')
     model = ResNet50(weights="imagenet", include_top=False,
                      input_tensor=Input(shape=config.INPUT_SHAPE))
 
@@ -98,19 +117,8 @@ def create_model():
 
     return model
 
-
-def main():
-    # tensorflow devices (GPU) print
-    # print(device_lib.list_local_devices())
-
-    model = create_model()
-    #print(model.summary())
-
-
-
-########################################## NACITAVANIE XML
-    print('loading label xml...')
-    
+def loadXML():
+    print('loading label xml...', end="")
     xml_data = open(config.VERI_DATASET + 'train_label.xml', 'r').read()  # Read file
     root = ET.XML(xml_data) 
 
@@ -119,30 +127,122 @@ def main():
     items=root[0]
     
     for i, item in enumerate(items):
-        print(item.attrib['imageName'], end=" ")
-        print(item.attrib['vehicleID'], end=" ")
-        print(item.attrib['cameraID'], end=" ")
-        print(item.attrib['colorID'], end=" ")
-        print(item.attrib['typeID'])
-        
         data.append([item.attrib['imageName'],item.attrib['vehicleID']])
-        
-
-        #data.append([subchild.text for subchild in child])
-        #cols.append(child.tag)
-        
-    
-    
 
     df = pd.DataFrame(data)  # Write in DF and transpose it
     df.columns = ["imageName", "vehicleID"]  # Update column names
-    print(df)
+    print("DONE")
+    return df
+
+
+def dataCarGenerator(X1, X2, X3, Y, b):
+    # Funkcia prebrata z https://github.com/noelcodella/tripletloss-keras-tensorflow/blob/master/tripletloss.py
+    local_seed = T_G_SEED
+    genX1 = datagen.flow(X1,Y, batch_size=b, seed=local_seed, shuffle=False)
+    genX2 = datagen.flow(X2,Y, batch_size=b, seed=local_seed, shuffle=False)
+    genX3 = datagen.flow(X3,Y, batch_size=b, seed=local_seed, shuffle=False)
+    while True:
+            X1i = genX1.next()
+            X2i = genX2.next()
+            X3i = genX3.next()
+
+            yield [X1i[0], X2i[0], X3i[0]], X1i[1]
+
+def load_img(p2f):
+    
+    t_image = cv2.imread(p2f)
+    t_image = cv2.resize(t_image, (T_G_HEIGHT,T_G_WIDTH))
+    t_image = t_image.astype("float32")
+    t_image = keras.applications.resnet50.preprocess_input(t_image, data_format='channels_last')
+    return t_image
+
+def createSet(df, batch_size):
+    
+    batch = []
+    dirc=config.VERI_DATASET+"image_train/"
+
+    for i in range(16):
+        # Load random sample from data frame
+        row = df.sample()          
+
+        # Load car ID and image name for anchor      
+        car_A, name_A = row['vehicleID'].values[0], row['imageName'].values[0] 
+        
+        # Load car ID and image name for positive
+        positive_row = (df.loc[df['vehicleID'] == car_A]).sample()
+        car_P, name_P = positive_row['vehicleID'].values[0], positive_row['imageName'].values[0]
+        
+        # Load car ID and image name for negative
+        negative_row = (df.loc[df['vehicleID'] != car_A]).sample()
+        car_N, name_N = negative_row['vehicleID'].values[0], negative_row['imageName'].values[0]
+        
+        print("A:",car_A, name_A)
+        print("P:",car_P, name_P)
+        print("N:",car_N, name_N)
+        
+        
+
+        img_A = load_img(dirc+name_A)
+        img_P = load_img(dirc+name_P)
+        img_N = load_img(dirc+name_N)
+
+        batch.append([img_A,img_P,img_N])
+
+
+
+
+    return batch
+
+def main():
+    # tensorflow devices (GPU) print
+    # print(device_lib.list_local_devices())
+
+   
+
+    model = create_model()
+    df=loadXML()
+    #print(df)
+    
+    dir_name = ""
+    batch = createSet(df,dir_name)
+
+    print(batch[0][0])
+
+    exit(0)
+
+    model.fit_generator(generator=dataCarGenerator(anchors_t,positives_t,negatives_t,Y_train,batch), steps_per_epoch=len(Y_train) / batch, epochs=1, shuffle=False, use_multiprocessing=True)
+
+    
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+########################################## NACITAVANIE XML
+    
+    
 ##########################################
 
-
-
-
+    
+    
     exit(1)
+
+
+    
 
     print("Start training ")
     print("Loading files...")

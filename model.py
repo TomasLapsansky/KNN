@@ -15,6 +15,7 @@ import keras.layers as kl
 
 from keras.preprocessing.image import ImageDataGenerator
 
+
 import xml.etree.ElementTree as ET
 import numpy as np
 
@@ -83,29 +84,17 @@ T_G_HEIGHT,T_G_WIDTH = 224, 224
 T_G_SEED = 1337
 
 def triplet_hard_loss(y_true, y_pred):
-    global SN
-    global PN
-    feat_num = SN * PN  # images num
-    y_pred = K.l2_normalize(y_pred, axis=1)
-    feat1 = K.tile(K.expand_dims(y_pred, axis=0), [feat_num, 1, 1])
-    feat2 = K.tile(K.expand_dims(y_pred, axis=1), [1, feat_num, 1])
-    delta = feat1 - feat2
-    dis_mat = K.sum(K.square(delta), axis=2) + K.epsilon()  # Avoid gradients becoming NAN
-    dis_mat = K.sqrt(dis_mat)
-    positive = dis_mat[0:SN, 0:SN]
-    negetive = dis_mat[0:SN, SN:]
-    for i in range(1, PN):
-        positive = tf.concat([positive, dis_mat[i * SN:(i + 1) * SN, i * SN:(i + 1) * SN]], axis=0)
-        if i != PN - 1:
-            negs = tf.concat([dis_mat[i * SN:(i + 1) * SN, 0:i * SN], dis_mat[i * SN:(i + 1) * SN, (i + 1) * SN:]],
-                             axis=1)
-        else:
-            negs = tf.concat(dis_mat[i * SN:(i + 1) * SN, 0:i * SN], axis=0)
-        negetive = tf.concat([negetive, negs], axis=0)
-    positive = K.max(positive, axis=1)
-    negetive = K.min(negetive, axis=1)
-    a1 = 0.6
-    loss = K.mean(K.maximum(0.0, positive - negetive + a1))
+    
+
+
+    anchor = y_pred[0]
+    pos    = y_pred[1]
+    neg    = y_pred[2]
+    pos_dist   = tf.reduce_sum(tf.square(tf.subtract(anchor, pos)), axis=-1)    
+    neg_dist   = tf.reduce_sum(tf.square(tf.subtract(anchor, neg)), axis=-1)    
+    basic_loss = tf.subtract(pos_dist, neg_dist)    
+    loss       = tf.reduce_sum(tf.maximum(basic_loss, 0.0))               
+        
     return loss
 
 
@@ -157,7 +146,13 @@ def create_model():
 
     model = Model([input_anchor, input_positive, input_negative], stacked_dists, name='triple_siamese')
     
-    model.compile(loss=triplet_hard_loss, metrics=[accuracy])
+    # Setting up optimizer designed for variable learning rate
+
+    # Variable Learning Rate per Layers
+    optim = keras.optimizers.Adam(lr=0.01, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=True)
+    model.compile(loss=triplet_hard_loss, optimizer=optim)
+    model.summary()
+
 
     return model
 
@@ -209,6 +204,9 @@ def createSet(df, batch_size):
     dirc=config.VERI_DATASET+"image_train/"
 
     for i in range(batch_size):
+
+
+
         # Load random sample from data frame
         row = df.sample()          
 
@@ -245,7 +243,7 @@ def main():
     df=loadXML()
     #print(df)
     
-    size_batch = 64
+    size_batch = 4
     batch= 16
     dir_name = ""
     print("\n"*5)
@@ -256,7 +254,11 @@ def main():
         anchor, positive, negative = createSet(df,size_batch)
         Y_train = np.random.randint(2, size=(1,2,anchor.shape[0])).T
 
-        model.fit_generator(generator=dataCarGenerator(anchor,positive,negative,Y_train,batch), steps_per_epoch=len(Y_train) / batch, epochs=1, shuffle=False, use_multiprocessing=True)
+        print ('Epoch ' + str(epoch), len(Y_train) / batch) 
+
+        
+
+        model.fit_generator(generator=dataCarGenerator(anchor,positive,negative,Y_train,batch), steps_per_epoch=5, epochs=1, shuffle=False, use_multiprocessing=True)
 
     
 

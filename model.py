@@ -275,11 +275,7 @@ def main():
         Y_train = np.random.randint(2, size=(1,2,anchor.shape[0])).T
 
         
-        
-
-        
-
-        model.fit_generator(generator=dataCarGenerator(anchor,positive,negative,Y_train,batch), steps_per_epoch=5, epochs=1, shuffle=False, use_multiprocessing=True)
+        model.fit_generator(generator=dataCarGenerator(anchor,positive,negative,Y_train,batch), steps_per_epoch=len(Y_train)/epoch , epochs=1, shuffle=False, use_multiprocessing=True)
 
     
 

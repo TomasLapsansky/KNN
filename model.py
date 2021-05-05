@@ -163,6 +163,9 @@ def create_model():
     
     # Setting up optimizer designed for variable learning rate
 
+    for layer in model.layers:
+        model.trainable = True
+
     # Variable Learning Rate per Layers
     optim = keras.optimizers.Adam(lr=0.01, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=True)
     model.compile(loss=triplet_hard_loss, optimizer=optim, metrics=[accuracy])

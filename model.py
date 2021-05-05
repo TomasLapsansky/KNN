@@ -222,7 +222,7 @@ def createSet(df, batch_size):
     dirc=config.VERI_DATASET+"image_train/"
 
     for i in range(batch_size):
-
+        print("%d/%d"%(i,batch_size),end="\r")
 
 
         # Load random sample from data frame

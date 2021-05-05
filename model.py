@@ -160,13 +160,13 @@ def main():
     lenitem = batch*100    
 
     gen = generator.MyGenerator(path, batch, lenitem)
-    
+    SPE = len(gen.Y_train)/epoch
 
     for epoch in range(1,config.EPOCHS):
 
         print ('Epoch ' + str(epoch), lenitem / config.EPOCHS) 
 
-        model.fit_generator(generator=gen.dataCarGenerator(), steps_per_epoch=len(gen.Y_train)/epoch , epochs=1, shuffle=False, use_multiprocessing=True)
+        model.fit_generator(generator=gen.dataCarGenerator(), steps_per_epoch= SPE, epochs=1, shuffle=False, use_multiprocessing=True)
 
     exit(0)
 

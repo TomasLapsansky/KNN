@@ -13,7 +13,7 @@ from keras.models import Model
 import keras.layers as kl
 
 
-from keras.preprocessing.image import ImageDataGenerator
+
 
 
 import xml.etree.ElementTree as ET
@@ -29,41 +29,17 @@ import os
 import config
 import generator
 
+
+
+# My generator
+import generator 
+
+
 SN = 3
 PN = 24
 identity_num = 751
 
 
-# def create_model_old(input_shape):
-#     # Vytvorenie malej siete pre siam
-#
-#     # Vytvorenie vstupov
-#     left_input = Input(input_shape)
-#     right_input = Input(input_shape)
-#
-#     # Auto 1
-#     encoded_l = convnet(left_input)
-#     # Auto 2
-#     encoded_r = convnet(right_input)
-#
-#     L1_distance = L1_layer([encoded_l, encoded_r])
-#     x = Dense(1024)(L1_distance)
-#     x = Dropout(0.2)(x)
-#     x = Dense(512)(x)
-#     x = Dropout(0.2)(x)
-#     x = Dense(256)(x)
-#     x = Dropout(0.2)(x)
-#     x = Activation('relu')(x)
-#
-#     prediction = Dense(1, activation='sigmoid')(x)
-#     # optimizer = Adam(0.001, decay=2.5e-4)
-#     optimizer = SGD(learning_rate=0.0001, momentum=0.4)
-#
-#     model = Model(inputs=[left_input, right_input], outputs=prediction)
-#     model.compile(loss="binary_crossentropy", optimizer=optimizer, metrics=['accuracy'])
-#
-#     print(model.summary())
-#     return model
 
 # TRENOVANIE A VYTVORENIE SETU
 # https://github.com/noelcodella/tripletloss-keras-tensorflow/blob/master/tripletloss.py
@@ -73,11 +49,7 @@ identity_num = 751
 
 
 #Global pre generatory
-datagen = ImageDataGenerator(width_shift_range=0.05,
-                                 height_shift_range=0.05,
-                                 zoom_range=0.1,
-                                 vertical_flip=True,
-                                )
+
 
 
 T_G_HEIGHT,T_G_WIDTH = 224, 224
@@ -174,109 +146,30 @@ def create_model():
 
     return model
 
-def loadXML():
-    print('loading label xml...', end="")
-    xml_data = open(config.VERI_DATASET + 'train_label.xml', 'r').read()  # Read file
-    root = ET.XML(xml_data) 
-
-    data = []
-    cols = []
-    items=root[0]
-    
-    for i, item in enumerate(items):
-        data.append([item.attrib['imageName'],item.attrib['vehicleID']])
-
-    df = pd.DataFrame(data)  # Write in DF and transpose it
-    df.columns = ["imageName", "vehicleID"]  # Update column names
-    print("DONE")
-    return df
-
-
-def dataCarGenerator(X1, X2, X3, Y, b):
-    # Funkcia prebrata z https://github.com/noelcodella/tripletloss-keras-tensorflow/blob/master/tripletloss.py
-    local_seed = T_G_SEED
-    genX1 = datagen.flow(X1,Y, batch_size=b, seed=local_seed, shuffle=False)
-    genX2 = datagen.flow(X2,Y, batch_size=b, seed=local_seed, shuffle=False)
-    genX3 = datagen.flow(X3,Y, batch_size=b, seed=local_seed, shuffle=False)
-    while True:
-            X1i = genX1.next()
-            X2i = genX2.next()
-            X3i = genX3.next()
-            yield [X1i[0], X2i[0], X3i[0]], X1i[1]
-
-def load_img(p2f):
-    
-    t_image = cv2.imread(p2f)
-    t_image = cv2.resize(t_image, (T_G_HEIGHT,T_G_WIDTH))
-    t_image = t_image.astype("float32")
-    t_image = keras.applications.resnet50.preprocess_input(t_image, data_format='channels_last')
-    return t_image
-
-def createSet(df, batch_size):
-    
-    batch = []
-    anchor =   []
-    positive = []
-    negative = []
-    dirc=config.VERI_DATASET+"image_train/"
-
-    for i in range(batch_size):
-        print("%d/%d"%(i,batch_size),end="\r")
-
-
-        # Load random sample from data frame
-        row = df.sample()          
-
-        # Load car ID and image name for anchor      
-        car_A, name_A = row['vehicleID'].values[0], row['imageName'].values[0] 
-        
-        # Load car ID and image name for positive
-        positive_row = (df.loc[df['vehicleID'] == car_A]).sample()
-        car_P, name_P = positive_row['vehicleID'].values[0], positive_row['imageName'].values[0]
-        
-        # Load car ID and image name for negative
-        negative_row = (df.loc[df['vehicleID'] != car_A]).sample()
-        car_N, name_N = negative_row['vehicleID'].values[0], negative_row['imageName'].values[0]
-
-
-
-        img_A = load_img(dirc+name_A)
-        img_P = load_img(dirc+name_P)
-        img_N = load_img(dirc+name_N)
-
-        anchor.append(img_A)
-        positive.append(img_P)
-        negative.append(img_N)
-
-    return np.array(anchor), np.array(positive), np.array(negative)
 
 def main():
     # tensorflow devices (GPU) print
     # print(device_lib.list_local_devices())
-
-   
-
+    
     model = create_model()
-    df=loadXML()
-    #print(df)
-    
-    size_batch = 2048
-    batch= 16
-    dir_name = ""
+
     print("\n"*5)
-    print("SPUSTAM TRENOVANIE")
 
-    for epoch in range(100):
+    path = config.VERI_DATASET + 'train_label.xml'
+    batch = 16
+    lenitem = batch*10    
 
-        print ('Epoch ' + str(epoch), size_batch / batch) 
-
-        anchor, positive, negative = createSet(df,size_batch)
-        Y_train = np.random.randint(2, size=(1,2,anchor.shape[0])).T
-
-        
-        model.fit_generator(generator=dataCarGenerator(anchor,positive,negative,Y_train,batch), steps_per_epoch=len(Y_train)/epoch , epochs=1, shuffle=False, use_multiprocessing=True)
-
+    gen = generator.MyGenerator(path, batch, lenitem)
     
+    
+
+    for epoch in range(1,5):
+
+        print ('Epoch ' + str(epoch), lenitem / batch) 
+
+        model.fit_generator(generator=gen.dataCarGenerator(), steps_per_epoch=len(gen.Y_train)/epoch , epochs=1, shuffle=False, use_multiprocessing=True)
+
+
 
     exit(0)
 

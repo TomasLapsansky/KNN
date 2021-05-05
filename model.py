@@ -165,7 +165,7 @@ def create_model():
 
     # Variable Learning Rate per Layers
     optim = keras.optimizers.Adam(lr=0.01, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=True)
-    model.compile(loss=triplet_hard_loss, optimizer=optim)
+    model.compile(loss=triplet_hard_loss, optimizer=optim, metrics=[accuracy])
     model.summary()
 
 
@@ -258,7 +258,7 @@ def main():
     df=loadXML()
     #print(df)
     
-    size_batch = 4
+    size_batch = 2048
     batch= 16
     dir_name = ""
     print("\n"*5)
@@ -266,14 +266,17 @@ def main():
 
     for epoch in range(100):
 
+        print ('Epoch ' + str(epoch), size_batch / batch) 
+
         anchor, positive, negative = createSet(df,size_batch)
         Y_train = np.random.randint(2, size=(1,2,anchor.shape[0])).T
 
-        print ('Epoch ' + str(epoch), len(Y_train) / batch) 
+        
+        
 
         
 
-        model.fit_generator(generator=dataCarGenerator(anchor,positive,negative,Y_train,batch), steps_per_epoch=5, epochs=1, shuffle=False, use_multiprocessing=True)
+        #model.fit_generator(generator=dataCarGenerator(anchor,positive,negative,Y_train,batch), steps_per_epoch=5, epochs=1, shuffle=False, use_multiprocessing=True)
 
     
 

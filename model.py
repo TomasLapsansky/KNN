@@ -202,7 +202,6 @@ def dataCarGenerator(X1, X2, X3, Y, b):
             X1i = genX1.next()
             X2i = genX2.next()
             X3i = genX3.next()
-            print(np.array([X1i[0], X2i[0], X3i[0]]).shape)
             yield [X1i[0], X2i[0], X3i[0]], X1i[1]
 
 def load_img(p2f):

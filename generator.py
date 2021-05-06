@@ -26,8 +26,10 @@ class MyGenerator():
                                  zoom_range=0.1,
                                  vertical_flip=True,
                                 )
-
-        self.createSet()
+        if(lenitem != -1):
+            self.createSet()
+        else:
+            print("Ready please use: localGen()")
 
     def loadXML(self,path):
         print('loading label xml...', end="")
@@ -63,7 +65,7 @@ class MyGenerator():
         positive = []
         negative = []
         dirc=config.VERI_DATASET+"image_train/"
-
+    
         for i in range(self.lenItem):
             print("%d/%d"%(i,self.lenItem),end="\r")
 
@@ -98,7 +100,57 @@ class MyGenerator():
 
         self.Y_train = np.random.randint(2, size=(1,2,self.anchor.shape[0])).T
 
+
+    def localSet(self):
         
+        batch = []
+        anchor =   []
+        positive = []
+        negative = []
+        dirc=config.VERI_DATASET+"image_train/"
+        while True:
+            for i in range(self.lenItem):
+                print("%d/%d"%(i,self.lenItem),end="\r")
+
+
+                # Load random sample from data frame
+                row = self.df.sample()          
+
+                # Load car ID and image name for anchor      
+                car_A, name_A = row['vehicleID'].values[0], row['imageName'].values[0] 
+                
+                # Load car ID and image name for positive
+                positive_row = (self.df.loc[self.df['vehicleID'] == car_A]).sample()
+                car_P, name_P = positive_row['vehicleID'].values[0], positive_row['imageName'].values[0]
+                
+                # Load car ID and image name for negative
+                negative_row = (self.df.loc[self.df['vehicleID'] != car_A]).sample()
+                car_N, name_N = negative_row['vehicleID'].values[0], negative_row['imageName'].values[0]
+
+
+
+                img_A = self.load_img(dirc+name_A)
+                img_P = self.load_img(dirc+name_P)
+                img_N = self.load_img(dirc+name_N)
+
+                anchor.append(img_A)
+                positive.append(img_P)
+                negative.append(img_N)
+
+            self.anchor = np.array(anchor)
+            self.positive = np.array(positive)
+            self.negative = np.array(negative)
+
+            self.Y_train = np.random.randint(2, size=(1,2,self.anchor.shape[0])).T
+            
+        
+            yield [self.anchor, self.positive, self.negative], self.Y_train
+        
+
+
+
+
+
 
     def dataCarGenerator(self):
         X1 = self.anchor
@@ -116,4 +168,4 @@ class MyGenerator():
                 X1i = genX1.next()
                 X2i = genX2.next()
                 X3i = genX3.next()
-                yield [X1i[0], X2i[0], X3i[0]], X1i[1]
+                return [X1i[0], X2i[0], X3i[0]], X1i[1]

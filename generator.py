@@ -110,8 +110,6 @@ class MyGenerator():
         dirc=config.VERI_DATASET+"image_train/"
         while True:
             for i in range(self.lenItem):
-                print("%d/%d"%(i,self.lenItem),end="\r")
-
 
                 # Load random sample from data frame
                 row = self.df.sample()          

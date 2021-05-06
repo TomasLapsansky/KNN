@@ -139,6 +139,10 @@ class MyGenerator():
             self.positive = np.array(positive)
             self.negative = np.array(negative)
 
+            anchor =   []
+            positive = []
+            negative = []
+
             self.Y_train = np.random.randint(2, size=(1,2,self.anchor.shape[0])).T
             
         

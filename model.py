@@ -94,7 +94,7 @@ def accuracy(y_true, y_pred):
 
 def create_model():
 
-    emb_size = 128
+    emb_size = 776 # number of classes in dataset
 
     print('Creating a model ...')
 
@@ -135,8 +135,8 @@ def create_model():
     
     # Setting up optimizer designed for variable learning rate
 
-    for layer in model.layers:
-        model.trainable = True
+    for layer in net.layers:
+        layer.trainable = True
 
     # Variable Learning Rate per Layers
     optim = keras.optimizers.Adam(lr=0.01, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=True)

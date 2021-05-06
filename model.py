@@ -160,7 +160,8 @@ def main():
     lenitem = batch*100    
 
     gen = generator.MyGenerator(path, batch, lenitem)
-    SPE = len(gen.Y_train)/epoch
+    SPE = len(gen.Y_train)/config.EPOCHS
+    print(SPE)
 
     for epoch in range(1,config.EPOCHS):
 

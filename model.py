@@ -90,9 +90,13 @@ def euclidean_distance(vects):
     return K.sqrt(K.maximum(K.sum(K.square(x - y), axis=1, keepdims=True), K.epsilon()))
 
 
-# https://stackoverflow.com/questions/52453079/what-accuracy-function-is-used-in-keras-when-using-metrics-accuracy
-# def accuracy(y_true, y_pred):
-#     return K.mean(K.equal(y_true, K.round(y_pred)), axis=-1)
+# https://stackoverflow.com/questions/47692541/implementing-accuracy-for-triplet-loss-in-keras
+def accuracy(_, y_pred):
+    subtraction = K.constant([-1, 1], shape=(2, 1))
+    diff = K.dot(y_pred, subtraction)
+    loss = K.maximum(K.sign(diff), K.constant(0))
+
+    return loss
 
 def create_model():
 
@@ -142,7 +146,7 @@ def create_model():
 
     # Variable Learning Rate per Layers
     optim = keras.optimizers.Adam(lr=0.01, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=True)
-    model.compile(loss=triplet_hard_loss, optimizer=optim, metrics=['accuracy'])
+    model.compile(loss=triplet_hard_loss, optimizer=optim, metrics=[accuracy])
     model.summary()
 
 

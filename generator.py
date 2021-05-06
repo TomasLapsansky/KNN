@@ -26,10 +26,7 @@ class MyGenerator():
                                  zoom_range=0.1,
                                  vertical_flip=True,
                                 )
-        if(lenitem != -1):
-            self.createSet()
-        else:
-            print("Ready please use: localGen()")
+        
 
     def loadXML(self,path):
         print('loading label xml...', end="")

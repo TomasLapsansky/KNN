@@ -4,8 +4,8 @@ import shutil
 INPUT_SHAPE = (224, 224, 3)
 
 EPOCHS = 50
-BATCH_SIZE = 64
-SPE = 100
+BATCH_SIZE = 16
+SPE = 200
 VSTEPS = 20
 
 try:

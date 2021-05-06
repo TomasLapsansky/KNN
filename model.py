@@ -150,7 +150,12 @@ def create_model():
 def main():
     # tensorflow devices (GPU) print
     # print(device_lib.list_local_devices())
+
+    print("Version of Tensor Flow:",tf.__version__)
     
+    print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+
+
     model = create_model()
 
     print("\n"*5)
@@ -163,7 +168,7 @@ def main():
     SPE = len(gen.Y_train)/config.EPOCHS
     print(SPE)
     
-    model.fit_generator(generator=gen.localSet(), steps_per_epoch= 10, epochs=1, shuffle=False, use_multiprocessing=True)
+    model.fit_generator(generator=gen.localSet(), steps_per_epoch= config.SPE, epochs=config.EPOCHS, shuffle=False, use_multiprocessing=True)
 
        
     exit(0)

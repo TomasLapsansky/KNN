@@ -1,171 +1,169 @@
-import os
-import random
-import re
-
-import cv2
+import xml.etree.ElementTree as ET
 import numpy as np
 import pandas as pd
-
 import config
+import cv2
+import keras
+from keras.preprocessing.image import ImageDataGenerator
 
 
-def get_pair(camera, id):
-    try:
-        df = pd.read_csv("pairs/ground_truth_shot_" + str(camera) + ".csv")
-        options = [str(camera) + "A/" + str(id)]
-        pair = str(df[df.camA.str.startswith(tuple(options))]['camB'])
-        return pair.split("_")[0].split('"')[1]
-    except:
-        return "none/none"
 
+T_G_SEED = 1337
 
-def create_pair(batch_size, dataset, datasetB):
-    
-    pathA = "capt/A"
-    pathB = "capt/B"
-    width, height, rest = config.INPUT_SHAPE
+class MyGenerator():
 
-    while True:
+    def __init__(self,path, batch, lenitem):
+        self.df = self.loadXML(path)
+        self.batch = batch
+        self.lenItem = lenitem
+        self.anchor = []
+        self.positive = []
+        self.negative = []
+        self.Y_train = []
 
-        output = []
-        labels = []
-        i = 0
-        while i < batch_size:
-            # print(i, batch_size, end='\r')
-
-            image = random.choice(dataset)
-            if (image[1] == "B"):
-                continue
-
-            imagelist = image.split("_")
-            pair = get_pair(int(imagelist[0][0]), int(imagelist[2]))
-            if (pair == "none/none"):
-                continue
-
-            pair = pair.split("/")
-            prefix = pair[0][0] + "B_id_" + pair[1]
-            set_list = []
-
-            if random.choice([True, False]):
-                pat = re.compile(r"^" + prefix)
-                dir_list = os.listdir(pathB)
-                list_name = [i for i in dir_list if pat.match(i)]
-
-                for file in list_name:
-
-                    if file.startswith(prefix):
-                        set_list.append(file)
-                    else:
-                        print("Nemam B")
-
-                if set_list == []:
-                    continue
-
-                img1 = image
-                img2 = random.choice(set_list)
-                label = [1]
-
-            else:
-
-                img1 = image
-                img2 = random.choice(datasetB)
-                label = [0]
-
-            img1 = cv2.imread(pathA + "/" + img1)
-            img1 = cv2.resize(img1, (width, height))
-
-            img2 = cv2.imread(pathB + "/" + img2)
-            img2 = cv2.resize(img2, (width, height))
-
-            # plt.figure()
-
-            # f, axarr = plt.subplots(2,1)
-
-            # use the created array to output your multiple images. In this case I have stacked 4 images vertically
-            # axarr[0].imshow(img1,cmap="hot")
-            # axarr[1].imshow(img2,cmap="hot")
-            # print(label)
-            # plt.show()
-
-            labels.append(label)
-            output.append([img1, img2])
-
-            i += 1
-
-        pairTrain = np.array(output)
-        labelTrain = np.array(labels)
-
-        yield [pairTrain[:, 0], pairTrain[:, 1]], labelTrain[:]
-
-
-def create_pair_optimized(batch_size, dataset, datasetB):
-    pathA = "capt/A"
-    pathB = "capt/B"
-    width, height, rest = config.INPUT_SHAPE
-
-    output = []
-    labels = []
-    i = 0
-    while i < batch_size:
-        print(i, batch_size, end='\r')
-
-        image = random.choice(dataset)
-        if (image[1] == "B"):
-            continue
-
-        imagelist = image.split("_")
-        pair = get_pair(int(imagelist[0][0]), int(imagelist[2]))
-        if (pair == "none/none"):
-            continue
-
-        pair = pair.split("/")
-        prefix = pair[0][0] + "B_id_" + pair[1]
-        set_list = []
-
-        if random.choice([True, False]):
-            pat = re.compile(r"^" + prefix)
-            dir_list = os.listdir(pathB)
-            list_name = [i for i in dir_list if pat.match(i)]
-
-            for file in list_name:
-
-                if file.startswith(prefix):
-                    set_list.append(file)
-                else:
-                    print("Nemam B")
-
-            if set_list == []:
-                continue
-
-            img1 = image
-            img2 = random.choice(set_list)
-            label = [1]
-
+        self.datagen = ImageDataGenerator(width_shift_range=0.05,
+                                 height_shift_range=0.05,
+                                 zoom_range=0.1,
+                                 vertical_flip=True,
+                                )
+        if(lenitem != -1):
+            self.createSet()
         else:
+            print("Ready please use: localGen()")
 
-            img1 = image
-            img2 = random.choice(datasetB)
-            label = [0]
+    def loadXML(self,path):
+        print('loading label xml...', end="")
+        xml_data = open(path, 'r').read()  # Read file
+        root = ET.XML(xml_data) 
 
-        img1 = cv2.imread(pathA + "/" + img1)
-        img1 = cv2.resize(img1, (width, height))
+        data = []
+        cols = []
+        items=root[0]
 
-        img2 = cv2.imread(pathB + "/" + img2)
-        img2 = cv2.resize(img2, (width, height))
+        for i, item in enumerate(items):
+            data.append([item.attrib['imageName'],item.attrib['vehicleID']])
 
-        # plt.figure()
+        df = pd.DataFrame(data)  # Write in DF and transpose it
+        df.columns = ["imageName", "vehicleID"]  # Update column names
+        print("DONE")
+        return df
 
-        # f, axarr = plt.subplots(2,1)
+    def load_img(self,p2f):
 
-        # use the created array to output your multiple images. In this case I have stacked 4 images vertically
-        # axarr[0].imshow(img1,cmap="hot")
-        # axarr[1].imshow(img2,cmap="hot")
-        # print(label)
-        # plt.show()
+        height, width, _ = config.INPUT_SHAPE
+        
+        t_image = cv2.imread(p2f)
+        t_image = cv2.resize(t_image, (height, width))
+        t_image = t_image.astype("float32")
+        t_image = keras.applications.resnet50.preprocess_input(t_image, data_format='channels_last')
+        return t_image
 
-        labels.append(label)
-        output.append([img1, img2])
+    def createSet(self):
+        
+        batch = []
+        anchor =   []
+        positive = []
+        negative = []
+        dirc=config.VERI_DATASET+"image_train/"
+    
+        for i in range(self.lenItem):
+            print("%d/%d"%(i,self.lenItem),end="\r")
 
-        i += 1
 
-    return (np.array(output), np.array(labels))
+            # Load random sample from data frame
+            row = self.df.sample()          
+
+            # Load car ID and image name for anchor      
+            car_A, name_A = row['vehicleID'].values[0], row['imageName'].values[0] 
+            
+            # Load car ID and image name for positive
+            positive_row = (self.df.loc[self.df['vehicleID'] == car_A]).sample()
+            car_P, name_P = positive_row['vehicleID'].values[0], positive_row['imageName'].values[0]
+            
+            # Load car ID and image name for negative
+            negative_row = (self.df.loc[self.df['vehicleID'] != car_A]).sample()
+            car_N, name_N = negative_row['vehicleID'].values[0], negative_row['imageName'].values[0]
+
+
+
+            img_A = self.load_img(dirc+name_A)
+            img_P = self.load_img(dirc+name_P)
+            img_N = self.load_img(dirc+name_N)
+
+            anchor.append(img_A)
+            positive.append(img_P)
+            negative.append(img_N)
+
+        self.anchor = np.array(anchor)
+        self.positive = np.array(positive)
+        self.negative = np.array(negative)
+
+        self.Y_train = np.random.randint(2, size=(1,2,self.anchor.shape[0])).T
+
+
+    def localSet(self):
+        
+        batch = []
+        anchor =   []
+        positive = []
+        negative = []
+        dirc=config.VERI_DATASET+"image_train/"
+        while True:
+            for i in range(self.lenItem):
+
+                # Load random sample from data frame
+                row = self.df.sample()          
+
+                # Load car ID and image name for anchor      
+                car_A, name_A = row['vehicleID'].values[0], row['imageName'].values[0] 
+                
+                # Load car ID and image name for positive
+                positive_row = (self.df.loc[self.df['vehicleID'] == car_A]).sample()
+                car_P, name_P = positive_row['vehicleID'].values[0], positive_row['imageName'].values[0]
+                
+                # Load car ID and image name for negative
+                negative_row = (self.df.loc[self.df['vehicleID'] != car_A]).sample()
+                car_N, name_N = negative_row['vehicleID'].values[0], negative_row['imageName'].values[0]
+
+
+
+                img_A = self.load_img(dirc+name_A)
+                img_P = self.load_img(dirc+name_P)
+                img_N = self.load_img(dirc+name_N)
+
+                anchor.append(img_A)
+                positive.append(img_P)
+                negative.append(img_N)
+
+            self.anchor = np.array(anchor)
+            self.positive = np.array(positive)
+            self.negative = np.array(negative)
+
+            self.Y_train = np.random.randint(2, size=(1,2,self.anchor.shape[0])).T
+            
+        
+            yield [self.anchor, self.positive, self.negative], self.Y_train
+        
+
+
+
+
+
+
+    def dataCarGenerator(self):
+        X1 = self.anchor
+        X2 = self.positive
+        X3 = self.negative
+        Y = self.Y_train
+        b = self.batch
+
+    # Funkcia prebrata z https://github.com/noelcodella/tripletloss-keras-tensorflow/blob/master/tripletloss.py
+        local_seed = T_G_SEED
+        genX1 = self.datagen.flow(X1,Y, batch_size=b, seed=local_seed, shuffle=False)
+        genX2 = self.datagen.flow(X2,Y, batch_size=b, seed=local_seed, shuffle=False)
+        genX3 = self.datagen.flow(X3,Y, batch_size=b, seed=local_seed, shuffle=False)
+        while True:
+                X1i = genX1.next()
+                X2i = genX2.next()
+                X3i = genX3.next()
+                return [X1i[0], X2i[0], X3i[0]], X1i[1]

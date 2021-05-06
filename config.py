@@ -9,8 +9,8 @@ SPE = 100
 VSTEPS = 20
 
 try:
-    scratchdir = os.environ["$SCRATCHDIR"]
     print("Scratchdir exists")
+    scratchdir = os.environ["$SCRATCHDIR"]
     if not os.path.exists(scratchdir + '/dataset/VeRi/'):
         print("Copying dataset to scratchdir")
         os.mkdir(scratchdir + '/dataset')

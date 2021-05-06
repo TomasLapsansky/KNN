@@ -157,18 +157,15 @@ def main():
 
     path = config.VERI_DATASET + 'train_label.xml'
     batch = config.BATCH_SIZE
-    lenitem = batch*100    
+    lenitem = batch  
 
     gen = generator.MyGenerator(path, batch, lenitem)
     SPE = len(gen.Y_train)/config.EPOCHS
     print(SPE)
+    
+    model.fit_generator(generator=gen.localSet(), steps_per_epoch= 10, epochs=1, shuffle=False, use_multiprocessing=True)
 
-    for epoch in range(1,config.EPOCHS):
-
-        print ('Epoch ' + str(epoch), lenitem / config.EPOCHS) 
-
-        model.fit_generator(generator=gen.dataCarGenerator(), steps_per_epoch= SPE, epochs=1, shuffle=False, use_multiprocessing=True)
-
+       
     exit(0)
 
     

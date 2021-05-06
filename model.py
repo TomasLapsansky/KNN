@@ -94,7 +94,7 @@ def accuracy(y_true, y_pred):
 
 def create_model():
 
-    emb_size = 16
+    emb_size = 128
 
     print('Creating a model ...')
 

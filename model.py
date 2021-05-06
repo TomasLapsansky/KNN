@@ -102,18 +102,6 @@ def create_model(input_shape):
     return model
 
 
-def parseArgs():
-    parser = argparse.ArgumentParser(description='Directory with captured samples')
-    parser.add_argument('-d', action='store', dest='directory',
-                        help='Directory to captures', default="")
-    parser.add_argument('-c', action='store', dest='checkpoint',
-                        help='Checkpoint file', default=None)
-    parser.add_argument('-o', action='store_true', dest='optimized',
-                        help='Optimized file loading for large RAM', default=False)
-
-    return parser.parse_args()
-
-
 def my_evaluate(model, img_car1, img_car2):
     width, height, rest = config.INPUT_SHAPE
 
@@ -124,9 +112,6 @@ def my_evaluate(model, img_car1, img_car2):
     car2 = cv2.imread(img_car2)
     car2 = cv2.resize(car2, (width, height))
 
-    
-    
-    
     car1 = car1[:,:]
     car2 = car2[:,:]
 
@@ -137,138 +122,27 @@ def my_evaluate(model, img_car1, img_car2):
 
     return out[0]
 
-def model_validate(model):
-    df = pd.read_csv("dataset/ground_truth_crowdsourced_avg_values.csv")
-    ok = 0
-    nok = 0
-    
-    close = 0
-
-    i=0
-    for index, row in df.iterrows():
-        imgA = cv2.imread("dataset/" + row['imgA'])
-        imgB = cv2.imread("dataset/" + row['imgB'])
-        
-        
-
-        plt.figure()
-        #subplot(r,c) provide the no. of rows and columns
-        f, axarr = plt.subplots(2,1) 
-
-        # use the created array to output your multiple images. In this case I have stacked 4 images vertically
-        axarr[0].imshow(imgA)
-        axarr[1].imshow(imgB)
-
-       
-        pathImgA = "dataset/" + row['imgA']
-        pathImgB = "dataset/" + row['imgB']
-        value = (row['value'] + 1) / 2
-        test = float(my_evaluate(model, pathImgA, pathImgB))
-        print(i,"people:" ,value, " net: ", test)
-
-        if(abs(test-value) < 0.30):
-            close += 1
-
-
-        if(test>0.8):
-            test = 1
-        else:
-            test = 0
-
-        if(value>0.8):
-            value = 1
-        else:
-            value = 0
-
-
-
-        if(round(value)==round(test)):
-            ok +=1
-        else:
-            nok+=1
-        
-        
-        i+=1
-        plt.show(block=True) 
-    
-    print("Same",ok/i,"Out",nok/i)
-    print("Close",close,"/",i)
-    print("Close",close/i)
-
-
 
 def main():
-
-    arguments = parseArgs()
-
     # tensorflow devices (GPU) print
     # print(device_lib.list_local_devices())
 
     model = create_model(input_shape=config.INPUT_SHAPE)
 
-    if (arguments.checkpoint != None):
-        checkpoint = arguments.checkpoint
-        print("Using checkpoint", checkpoint)
-        if (not os.path.exists(checkpoint)):
-            print("Checkpoint nenajdeny")
-            exit(1)
-        model.load_weights(checkpoint)
-        print("Checkpoint loaded")
-        model_validate(model)
-    else:
-        print("Start training ")
-        print("Loading files...")
-        
-        arg_dir = arguments.directory
-        if(not arguments.directory == ""):
-            arg_dir = arguments.directory+"/"
+    print("Start training ")
+    print("Loading files...")
 
-        pathA = arg_dir+"capt/A"
-        pathB = arg_dir+"capt/B"
-        dataset = [x for x in os.listdir(pathA)
-                   if os.path.isfile(os.path.join(pathA, x))]
 
-        datasetB = [x for x in os.listdir(pathB)
-                    if os.path.isfile(os.path.join(pathB, x))]
+    path = config.VERI_DATASET + 'train_label.xml'
+    batch = config.BATCH_SIZE
+    lenitem = batch
 
-        print("DONE")
+    gen = generator.MyGenerator(path, batch, lenitem)
 
-        checkpoint_path = os.getcwd() + "/checkpoint"
-        if not os.path.exists(checkpoint_path):
-            os.mkdir(checkpoint_path)
-
-        filepath = checkpoint_path + "/weights-improvement-epoch-{epoch:02d}-val-{val_accuracy:.2f}.hdf5"
-        checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
-        callbacks_list = [checkpoint]
-
-        if (arguments.optimized):
-            pairTrain, labelTrain = generator.create_pair_optimized(config.BATCH_SIZE * config.SPE, dataset, datasetB)
-            pairTest, labelTest = generator.create_pair_optimized(config.BATCH_SIZE * config.VSTEPS, dataset, datasetB)
-
-            history = model.fit(
-                [pairTrain[:, 0], pairTrain[:, 1]], labelTrain,
-                validation_data=([pairTest[:, 0], pairTest[:, 1]], labelTest[:]),
-                batch_size=config.BATCH_SIZE,
-                epochs=config.EPOCHS,
-                validation_steps=config.VSTEPS,
-                callbacks=callbacks_list)
-
-        else:
-            trainGeneratorOut = generator.create_pair(config.BATCH_SIZE, dataset, datasetB)
-            validGeneratorOut = generator.create_pair(config.BATCH_SIZE, dataset, datasetB)
-
-            history = model.fit(
-                trainGeneratorOut,
-                validation_data=validGeneratorOut,
-                steps_per_epoch=config.SPE,
-                epochs=config.EPOCHS,
-                validation_steps=config.VSTEPS,
-                callbacks=callbacks_list)
-
-        # opt = SGD(learning_rate=0.01, momentum=0.0, nesterov=False)
-
-        # my_evaluate(model, img_car1, img_car2)
-
+    history = model.fit_generator(generator=gen.localSet(),
+        epochs=config.EPOCHS,
+        steps_per_epoch=config.SPE,
+        callbacks=[])
 
 if __name__ == "__main__":
     main()

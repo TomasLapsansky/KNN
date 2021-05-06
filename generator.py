@@ -5,6 +5,7 @@ import config
 import cv2
 import keras
 from keras.preprocessing.image import ImageDataGenerator
+import random
 
 
 
@@ -26,10 +27,6 @@ class MyGenerator():
                                  zoom_range=0.1,
                                  vertical_flip=True,
                                 )
-        if(lenitem != -1):
-            self.createSet()
-        else:
-            print("Ready please use: localGen()")
 
     def loadXML(self,path):
         print('loading label xml...', end="")
@@ -58,55 +55,10 @@ class MyGenerator():
         t_image = keras.applications.resnet50.preprocess_input(t_image, data_format='channels_last')
         return t_image
 
-    def createSet(self):
-        
-        batch = []
-        anchor =   []
-        positive = []
-        negative = []
-        dirc=config.VERI_DATASET+"image_train/"
-    
-        for i in range(self.lenItem):
-            print("%d/%d"%(i,self.lenItem),end="\r")
-
-
-            # Load random sample from data frame
-            row = self.df.sample()          
-
-            # Load car ID and image name for anchor      
-            car_A, name_A = row['vehicleID'].values[0], row['imageName'].values[0] 
-            
-            # Load car ID and image name for positive
-            positive_row = (self.df.loc[self.df['vehicleID'] == car_A]).sample()
-            car_P, name_P = positive_row['vehicleID'].values[0], positive_row['imageName'].values[0]
-            
-            # Load car ID and image name for negative
-            negative_row = (self.df.loc[self.df['vehicleID'] != car_A]).sample()
-            car_N, name_N = negative_row['vehicleID'].values[0], negative_row['imageName'].values[0]
-
-
-
-            img_A = self.load_img(dirc+name_A)
-            img_P = self.load_img(dirc+name_P)
-            img_N = self.load_img(dirc+name_N)
-
-            anchor.append(img_A)
-            positive.append(img_P)
-            negative.append(img_N)
-
-        self.anchor = np.array(anchor)
-        self.positive = np.array(positive)
-        self.negative = np.array(negative)
-
-        self.Y_train = np.random.randint(2, size=(1,2,self.anchor.shape[0])).T
-
-
     def localSet(self):
-        
-        batch = []
-        anchor =   []
-        positive = []
-        negative = []
+
+        output = []
+        labels = []
         dirc=config.VERI_DATASET+"image_train/"
         while True:
             for i in range(self.lenItem):
@@ -125,30 +77,23 @@ class MyGenerator():
                 negative_row = (self.df.loc[self.df['vehicleID'] != car_A]).sample()
                 car_N, name_N = negative_row['vehicleID'].values[0], negative_row['imageName'].values[0]
 
-
-
                 img_A = self.load_img(dirc+name_A)
                 img_P = self.load_img(dirc+name_P)
                 img_N = self.load_img(dirc+name_N)
 
-                anchor.append(img_A)
-                positive.append(img_P)
-                negative.append(img_N)
+                if random.choice([True, False]):
+                    label = [1]
+                    labels.append(label)
+                    output.append([img_A, img_P])
+                else:
+                    label = [0]
+                    labels.append(label)
+                    output.append([img_A, img_N])
 
-            self.anchor = np.array(anchor)
-            self.positive = np.array(positive)
-            self.negative = np.array(negative)
+            pair_train = np.array(output)
+            label_train = np.array(labels)
 
-            self.Y_train = np.random.randint(2, size=(1,2,self.anchor.shape[0])).T
-            
-        
-            yield [self.anchor, self.positive, self.negative], self.Y_train
-        
-
-
-
-
-
+            yield [pair_train[:, 0], pair_train[:, 1]], label_train[:]
 
     def dataCarGenerator(self):
         X1 = self.anchor

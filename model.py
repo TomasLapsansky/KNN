@@ -135,7 +135,7 @@ def create_model():
     
     # Setting up optimizer designed for variable learning rate
 
-    for layer in net.layers:
+    for layer in model.layers:
         layer.trainable = True
 
     # Variable Learning Rate per Layers

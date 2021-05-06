@@ -1,4 +1,5 @@
 import os
+import shutil
 
 INPUT_SHAPE = (224, 224, 3)
 
@@ -7,9 +8,17 @@ BATCH_SIZE = 64
 SPE = 100
 VSTEPS = 20
 
-if(os.path.exists('/scratch.ssd/xlapsa00/job_7468248.meta-pbs.metacentrum.cz' + '/dataset/VeRi/')):
-    VERI_DATASET = '/scratch.ssd/xlapsa00/job_7468248.meta-pbs.metacentrum.cz' + '/dataset/VeRi/'
-else:
+try:
+    scratchdir = os.environ["$SCRATCHDIR"]
+    print("Scratchdir exists")
+    if not os.path.exists(scratchdir + '/dataset/VeRi/'):
+        print("Copying dataset to scratchdir")
+        os.mkdir(scratchdir + '/dataset')
+        shutil.copytree('./dataset/VeRi', scratchdir + '/dataset/VeRi')
+        print("Copying finished")
+    VERI_DATASET = scratchdir + '/dataset/VeRi/'
+except:
+    print("Scratchdir doesn't exist")
     VERI_DATASET = './dataset/VeRi/'
 
 

@@ -179,6 +179,15 @@ class SiameseModel(Model):
 We are now ready to train our model.
 """
 
+checkpoint_path = os.getcwd() + "/checkpoint"
+if not os.path.exists(checkpoint_path):
+    os.mkdir(checkpoint_path)
+
+filepath = checkpoint_path + "/weights-improvement-epoch-{epoch:02d}-val-{val_accuracy:.2f}.hdf5"
+checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
+callbacks_list = [checkpoint]
+
+
 path_train = config.VERI_DATASET + 'train_label.xml'
 path_test = config.VERI_DATASET + 'test_label.xml'
 batch = config.BATCH_SIZE
@@ -198,7 +207,8 @@ siamese_model.fit(gen_train.newLocalSet1(),
                   epochs=config.EPOCHS,
                   validation_steps=config.VSTEPS,
                   shuffle=False,
-                  use_multiprocessing=False)
+                  use_multiprocessing=False,
+                  callbacks=callbacks_list)
 
 anchor, positive, negative = next(gen_val.newLocalSet1())
 

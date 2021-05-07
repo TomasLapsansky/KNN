@@ -1,6 +1,8 @@
 import os
 
 from keras.callbacks import ModelCheckpoint
+from keras.utils import multi_gpu_model
+
 
 import tensorflow as tf
 from tensorflow.keras import layers
@@ -201,6 +203,12 @@ SPE = len(gen_train.Y_train) / config.EPOCHS
 print(SPE)
 
 siamese_model = SiameseModel(siamese_network)
+
+try:
+    siamese_model = multi_gpu_model(siamese_model, gpus=2)
+except:
+    pass
+
 siamese_model.compile(optimizer=optimizers.Adam(0.0001))
 
 siamese_model.fit(gen_train.newLocalSet1(),

@@ -119,7 +119,7 @@ def main():
               steps_per_epoch=config.SPE,
               epochs=config.EPOCHS,
               batch_size=config.BATCH_SIZE,
-              validation_data=gen.localSet(),
+              validation_data=gen.localValidation(),
               validation_steps=config.VSTEPS,
               validation_batch_size=config.BATCH_SIZE,
               shuffle=False,

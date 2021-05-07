@@ -3,10 +3,10 @@ import shutil
 
 INPUT_SHAPE = (224, 224, 3)
 
-EPOCHS = 50
+EPOCHS = 10
 BATCH_SIZE = 64
-SPE = 200
-VSTEPS = 100
+SPE = 150
+VSTEPS = 50
 
 try:
     print("Scratchdir exists")

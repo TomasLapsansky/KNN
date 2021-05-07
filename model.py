@@ -76,7 +76,7 @@ def accuracy(_, y_pred):
 
 
 
-def create_model1():
+def create_model():
     emb_size = 776  # number of classes in dataset
 
     print('Creating a model ...')

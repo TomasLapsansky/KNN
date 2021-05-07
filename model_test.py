@@ -6,6 +6,7 @@ from tensorflow.keras import optimizers
 from tensorflow.keras import metrics
 from tensorflow.keras import Model
 from tensorflow.keras.applications import resnet
+from keras import backend as K
 
 import generator
 
@@ -112,6 +113,7 @@ class SiameseModel(Model):
         self.siamese_network = siamese_network
         self.margin = margin
         self.loss_tracker = metrics.Mean(name="loss")
+        self.acc_tracker = metrics.Mean(name="accuracy")
 
     def call(self, inputs):
         return self.siamese_network(inputs)
@@ -123,6 +125,7 @@ class SiameseModel(Model):
         # `compile()`.
         with tf.GradientTape() as tape:
             loss = self._compute_loss(data)
+            acc = self._compute_acc(data)
 
         # Storing the gradients of the loss function with respect to the
         # weights/parameters.
@@ -135,7 +138,8 @@ class SiameseModel(Model):
 
         # Let's update and return the training loss metric.
         self.loss_tracker.update_state(loss)
-        return {"loss": self.loss_tracker.result()}
+        self.acc_tracker.update_state(acc)
+        return {"loss": self.loss_tracker.result(), "accuracy": self.acc_tracker.result()}
 
     def test_step(self, data):
         loss = self._compute_loss(data)
@@ -155,6 +159,10 @@ class SiameseModel(Model):
         loss = ap_distance - an_distance
         loss = tf.maximum(loss + self.margin, 0.0)
         return loss
+
+    def _compute_acc(self, data):
+        ap_distance, an_distance = self.siamese_network(data)
+        return K.mean(ap_distance < an_distance)
 
     @property
     def metrics(self):
@@ -180,7 +188,7 @@ SPE = len(gen_train.Y_train) / config.EPOCHS
 print(SPE)
 
 siamese_model = SiameseModel(siamese_network)
-siamese_model.compile(optimizer=optimizers.Adam(0.0001))
+siamese_model.compile(optimizer=optimizers.Adam(0.0001), metrics=['accuracy'])
 
 siamese_model.fit(gen_train.newLocalSet1(),
                   steps_per_epoch=config.SPE,

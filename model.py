@@ -113,7 +113,7 @@ def create_model():
     tertiary_dist = kl.Lambda(euclidean_distance, name='ter_dist')([net_positive, net_negative])
 
     # This lambda layer simply stacks outputs so both distances are available to the objective
-    stacked_dists = kl.Lambda(lambda vects: K.stack(vects, axis=0), name='stacked_dists')(
+    stacked_dists = kl.Lambda(lambda vects: K.stack(vects, axis=-1), name='stacked_dists')(
         [positive_dist, negative_dist, tertiary_dist])
 
     model = Model([input_anchor, input_positive, input_negative], stacked_dists, name='triple_siamese')

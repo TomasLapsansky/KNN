@@ -118,8 +118,8 @@ def create_model():
 
     # Variable Learning Rate per Layers
     optimizer = Adam(lr=0.001)
-    model.compile(loss=tfa.losses.TripletSemiHardLoss(), optimizer=optimizer, metrics=[accuracy])
-    # model.compile(loss=triplet_hard_loss, optimizer=optimizer, metrics=[accuracy])
+    #model.compile(loss=tfa.losses.TripletSemiHardLoss(), optimizer=optimizer, metrics=[accuracy])
+    model.compile(loss=triplet_hard_loss, optimizer=optimizer, metrics=[accuracy])
     model.summary()
 
     return model

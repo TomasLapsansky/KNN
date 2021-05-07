@@ -15,7 +15,6 @@ def loadXML(path):
     root = ET.XML(xml_data)
 
     data = []
-    cols = []
     items = root[0]
 
     for i, item in enumerate(items):
@@ -69,11 +68,11 @@ class MyGenerator():
 
                 # Load car ID and image name for positive
                 positive_row = (self.df.loc[self.df['vehicleID'] == car_A]).sample()
-                car_P, name_P = positive_row['vehicleID'].values[0], positive_row['imageName'].values[0]
+                name_P = positive_row['imageName'].values[0]
 
                 # Load car ID and image name for negative
                 negative_row = (self.df.loc[self.df['vehicleID'] != car_A]).sample()
-                car_N, name_N = negative_row['vehicleID'].values[0], negative_row['imageName'].values[0]
+                name_N = negative_row['imageName'].values[0]
 
                 img_A = self.load_img(dirc + name_A)
                 img_P = self.load_img(dirc + name_P)

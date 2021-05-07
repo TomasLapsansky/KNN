@@ -155,7 +155,7 @@ def main():
               steps_per_epoch=config.SPE,
               validation_data=gen_val.newLocalSet(),
               epochs=config.EPOCHS,
-              steps_per_epoch= 50,
+              validation_steps= 50,
               shuffle=False,
               use_multiprocessing=False)
 

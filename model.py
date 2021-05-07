@@ -35,13 +35,10 @@ identity_num = 751
 # TRENOVANIE A VYTVORENIE SETU
 # https://github.com/noelcodella/tripletloss-keras-tensorflow/blob/master/tripletloss.py
 
-
 # https://github.com/michuanhaohao/keras_reid/blob/master/reid_tripletcls.py
 
 
 # Global pre generatory
-
-
 T_G_HEIGHT, T_G_WIDTH = 224, 224
 T_G_SEED = 1337
 
@@ -132,8 +129,8 @@ def create_model():
         layer.trainable = True
 
     # Variable Learning Rate per Layers
-    optim = keras.optimizers.Adam(lr=0.01, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=True)
-    model.compile(loss=triplet_hard_loss, optimizer=optim, metrics=[accuracy])
+    optimizer = Adam(lr=0.01, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=True)
+    model.compile(loss=triplet_hard_loss, optimizer=optimizer, metrics=[accuracy])
     model.summary()
 
     return model
@@ -159,70 +156,11 @@ def main():
     SPE = len(gen.Y_train) / config.EPOCHS
     print(SPE)
 
-    # model.fit_generator(generator=gen.localSet(), steps_per_epoch= config.SPE, epochs=config.EPOCHS, shuffle=False, use_multiprocessing=True)
-    # https://keunwoochoi.wordpress.com/2017/08/24/tip-fit_generator-in-keras-how-to-parallelise-correctly/
     model.fit(gen.localSet(),
               steps_per_epoch=config.SPE,
               epochs=config.EPOCHS,
               shuffle=False,
               use_multiprocessing=False)
-
-    exit(0)
-
-    ########################################## NACITAVANIE XML
-
-    ##########################################
-
-    exit(1)
-
-    print("Start training ")
-    print("Loading files...")
-
-    pathA = "capt/A"
-    pathB = "capt/B"
-    dataset = [x for x in os.listdir(pathA)
-               if os.path.isfile(os.path.join(pathA, x))]
-
-    datasetB = [x for x in os.listdir(pathB)
-                if os.path.isfile(os.path.join(pathB, x))]
-
-    print("DONE")
-
-    checkpoint_path = os.getcwd() + "/models"
-    if not os.path.exists(checkpoint_path):
-        os.mkdir(checkpoint_path)
-
-    filepath = checkpoint_path + "/weights-improvement-epoch-{epoch:02d}-val-{val_accuracy:.2f}.hdf5"
-    checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
-    callbacks_list = [checkpoint]
-
-    if (arguments.optimized):
-        pairTrain, labelTrain = generator.create_pair_optimized(config.BATCH_SIZE * config.SPE, dataset, datasetB)
-        pairTest, labelTest = generator.create_pair_optimized(config.BATCH_SIZE * config.VSTEPS, dataset, datasetB)
-
-        history = model.fit(
-            [pairTrain[:, 0], pairTrain[:, 1]], labelTrain,
-            validation_data=([pairTest[:, 0], pairTest[:, 1]], labelTest[:]),
-            batch_size=config.BATCH_SIZE,
-            epochs=config.EPOCHS,
-            validation_steps=config.VSTEPS,
-            callbacks=callbacks_list)
-
-    else:
-        trainGeneratorOut = generator.create_pair(config.BATCH_SIZE, dataset, datasetB)
-        validGeneratorOut = generator.create_pair(config.BATCH_SIZE, dataset, datasetB)
-
-        history = model.fit(
-            trainGeneratorOut,
-            validation_data=validGeneratorOut,
-            steps_per_epoch=config.SPE,
-            epochs=config.EPOCHS,
-            validation_steps=config.VSTEPS,
-            callbacks=callbacks_list)
-
-        # 
-
-        # my_evaluate(model, img_car1, img_car2)
 
 
 if __name__ == "__main__":

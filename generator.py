@@ -226,7 +226,6 @@ class MyGenerator():
                 positive.append(img_P)
                 negative.append(img_N)
 
-            print(" Pripraveny  ")
             self.anchor = np.array(anchor)
             self.positive = np.array(positive)
             self.negative = np.array(negative)

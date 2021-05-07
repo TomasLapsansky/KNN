@@ -7,6 +7,7 @@ EPOCHS = 10
 BATCH_SIZE = 64
 SPE = 150
 VSTEPS = round(SPE/2)
+TESTTRAIN = 0.3
 
 try:
     print("Scratchdir exists")

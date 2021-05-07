@@ -130,7 +130,7 @@ def create_model():
 
     # Variable Learning Rate per Layers
     optimizer = Adam(lr=0.01, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=True)
-    model.compile(loss=triplet_hard_loss, optimizer=optimizer, metrics=[accuracy])
+    model.compile(loss=triplet_hard_loss, optimizer=optimizer, metrics='accuracy')
     model.summary()
 
     return model

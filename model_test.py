@@ -1,4 +1,4 @@
-import config
+import os
 
 import tensorflow as tf
 from tensorflow.keras import layers
@@ -9,6 +9,7 @@ from tensorflow.keras.applications import resnet
 from keras import backend as K
 
 import generator
+import config
 
 width, height, _ = config.INPUT_SHAPE
 target_shape = (width, height)

@@ -126,12 +126,14 @@ def create_model():
 
 
 def main():
-    # tensorflow devices (GPU) print
-    # print(device_lib.list_local_devices())
+    #tensorflow devices (GPU) print
+    print(tf.config.list_physical_devices('GPU'))
 
     print("Version of Tensor Flow:", tf.__version__)
 
     print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+
+    
 
     model = create_model()
 

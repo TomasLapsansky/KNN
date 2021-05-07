@@ -31,10 +31,8 @@ class MyGenerator():
 
     def __init__(self, path, lenitem, df=None):
         
-        if(df == None):
-            self.df = loadXML(path)
-        else:
-            self.df = df
+        
+        self.df = df
 
         self.lenItem = lenitem
 

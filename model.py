@@ -137,17 +137,23 @@ def main():
 
     print("\n" * 5)
 
-    path = config.VERI_DATASET + 'train_label.xml'
+    
+    path_train = config.VERI_DATASET + 'train_label.xml'
+    path_test = config.VERI_DATASET + 'test_label.xml'
     batch = config.BATCH_SIZE
     lenitem = batch
 
-    gen = generator.MyGenerator(path, batch, lenitem)
-    SPE = len(gen.Y_train) / config.EPOCHS
+    
+
+    gen_train = generator.MyGenerator(path_train, "image_train/", batch, lenitem)
+    gen_val = generator.MyGenerator(path_test, "image_test/", batch, lenitem)
+    SPE = len(gen_train.Y_train) / config.EPOCHS
     print(SPE)
 
 
-    model.fit(gen.newLocalSet(),
+    model.fit(gen_train.newLocalSet(),
               steps_per_epoch=config.SPE,
+              validation_data=gen_val.newLocalSet(),
               epochs=config.EPOCHS,
               shuffle=False,
               use_multiprocessing=False)

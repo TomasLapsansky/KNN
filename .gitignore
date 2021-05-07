@@ -6,3 +6,4 @@ capt/
 __pycache__/
 capt.zip
 venv/
+checkpoint/

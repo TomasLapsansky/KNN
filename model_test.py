@@ -190,7 +190,6 @@ filepath = checkpoint_path + "/weights-improvement-epoch-{epoch:02d}-val-{val_ac
 checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
 callbacks_list = [checkpoint]
 
-
 path_train = config.VERI_DATASET + 'train_label.xml'
 path_test = config.VERI_DATASET + 'test_label.xml'
 batch = config.BATCH_SIZE

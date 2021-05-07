@@ -5,8 +5,8 @@ INPUT_SHAPE = (224, 224, 3)
 
 EPOCHS = 10
 BATCH_SIZE = 64
-SPE = 100
-VSTEPS = 10
+SPE = 150
+VSTEPS = 50
 
 try:
     print("Scratchdir exists")

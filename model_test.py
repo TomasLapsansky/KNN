@@ -6,6 +6,10 @@ from tensorflow.keras import optimizers
 from tensorflow.keras import metrics
 from tensorflow.keras import Model
 from tensorflow.keras.applications import resnet
+from tensorflow.keras import metrics
+
+
+
 
 import generator
 
@@ -163,6 +167,9 @@ class SiameseModel(Model):
         return [self.loss_tracker]
 
 
+def accuracy(_, y_pred):
+    return K.mean(y_pred[:, 0, 0] < y_pred[:, 1, 0])
+
 """
 ## Training
 
@@ -180,7 +187,7 @@ SPE = len(gen_train.Y_train) / config.EPOCHS
 print(SPE)
 
 siamese_model = SiameseModel(siamese_network)
-siamese_model.compile(optimizer=optimizers.Adam(0.0001))
+siamese_model.compile(optimizer=optimizers.Adam(0.0001),  metrics=[accuracy] )
 
 siamese_model.fit(gen_train.newLocalSet1(),
                   steps_per_epoch=config.SPE,
@@ -189,3 +196,19 @@ siamese_model.fit(gen_train.newLocalSet1(),
                   validation_steps=config.VSTEPS,
                   shuffle=False,
                   use_multiprocessing=False)
+
+anchor, positive, negative = next(gen_val.newLocalSet1())
+
+anchor_embedding, positive_embedding, negative_embedding = (
+    embedding(resnet.preprocess_input(anchor)),
+    embedding(resnet.preprocess_input(positive)),
+    embedding(resnet.preprocess_input(negative)),
+)
+
+cosine_similarity = metrics.CosineSimilarity()
+
+positive_similarity = cosine_similarity(anchor_embedding, positive_embedding)
+print("Positive similarity:", positive_similarity.numpy())
+
+negative_similarity = cosine_similarity(anchor_embedding, negative_embedding)
+print("Negative similarity", negative_similarity.numpy())

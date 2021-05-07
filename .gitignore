@@ -5,3 +5,4 @@ capt/
 .idea/
 __pycache__/
 capt.zip
+venv/

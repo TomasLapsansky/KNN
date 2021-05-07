@@ -1,33 +1,11 @@
-import argparse
-import sys
-
-import tensorflow as tf
-import keras
-from keras.models import Sequential
-from tensorflow.keras import layers
-from tensorflow.python.client import device_lib
 from keras.layers import Dense, Activation, Conv2D, Flatten, MaxPooling2D, Dropout, Input
 from keras.layers import Dense
-from keras.layers.normalization import BatchNormalization
 from keras import Model
-from keras import optimizers
-from keras.preprocessing.image import ImageDataGenerator
 from keras.optimizers import Adam, SGD
-from keras.callbacks import ModelCheckpoint
-from tensorflow.keras import regularizers
 from keras.layers.core import Lambda
-from keras.regularizers import l2
-from keras.optimizers import Adam
 import numpy as np
 from keras import backend as K
-import pandas as pd
 import cv2
-import re
-import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
-
-import random, os
-from sklearn.model_selection import train_test_split
 
 import config
 import generator
@@ -112,13 +90,13 @@ def my_evaluate(model, img_car1, img_car2):
     car2 = cv2.imread(img_car2)
     car2 = cv2.resize(car2, (width, height))
 
-    car1 = car1[:,:]
-    car2 = car2[:,:]
+    car1 = car1[:, :]
+    car2 = car2[:, :]
 
-    input1=np.array([car1])
-    input2=np.array([car2])
+    input1 = np.array([car1])
+    input2 = np.array([car2])
 
-    out = list(model.predict([input1,input2]))
+    out = list(model.predict([input1, input2]))
 
     return out[0]
 
@@ -132,17 +110,17 @@ def main():
     print("Start training ")
     print("Loading files...")
 
-
     path = config.VERI_DATASET + 'train_label.xml'
     batch = config.BATCH_SIZE
     lenitem = batch
 
     gen = generator.MyGenerator(path, batch, lenitem)
+    model.fit(gen.localSet(),
+              steps_per_epoch=config.SPE,
+              epochs=config.EPOCHS,
+              shuffle=False,
+              use_multiprocessing=False)
 
-    history = model.fit_generator(generator=gen.localSet(),
-        epochs=config.EPOCHS,
-        steps_per_epoch=config.SPE,
-        callbacks=[])
 
 if __name__ == "__main__":
     main()

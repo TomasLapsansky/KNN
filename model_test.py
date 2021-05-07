@@ -143,10 +143,12 @@ class SiameseModel(Model):
 
     def test_step(self, data):
         loss = self._compute_loss(data)
+        acc = self._compute_acc(data)
 
         # Let's update and return the loss metric.
         self.loss_tracker.update_state(loss)
-        return {"loss": self.loss_tracker.result()}
+        self.acc_tracker.update_state(acc)
+        return {"loss": self.loss_tracker.result(), "accuracy": self.acc_tracker.result()}
 
     def _compute_loss(self, data):
         # The output of the network is a tuple containing the distances
@@ -171,10 +173,6 @@ class SiameseModel(Model):
         return [self.loss_tracker]
 
 
-def accuracy(_, y_pred):
-    return K.mean(y_pred[:, 0, 0] < y_pred[:, 1, 0])
-
-
 """
 ## Training
 
@@ -192,7 +190,7 @@ SPE = len(gen_train.Y_train) / config.EPOCHS
 print(SPE)
 
 siamese_model = SiameseModel(siamese_network)
-siamese_model.compile(optimizer=optimizers.Adam(0.0001), metrics=[accuracy])
+siamese_model.compile(optimizer=optimizers.Adam(0.0001))
 
 siamese_model.fit(gen_train.newLocalSet1(),
                   steps_per_epoch=config.SPE,

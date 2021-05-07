@@ -1,32 +1,20 @@
-import argparse
-import sys
-
 import tensorflow as tf
 import keras
-from keras.applications.resnet import ResNet50
-from keras.layers import Dense, Activation, Conv2D, Flatten, MaxPooling2D, Dropout, Input
-from keras.callbacks import ModelCheckpoint
 from keras import backend as K
 from keras.optimizers import Adam
 from keras.models import Model
 
 import keras.layers as kl
 
-import xml.etree.ElementTree as ET
+import tensorflow_addons as tfa # Pre pouzitie triplet loss priamo z TF
+
 import numpy as np
 
-import cv2
-import matplotlib.pyplot as plt
-
-import pandas as pd
-
-import os
-
+# My imports
 import config
 import generator
 
-# My generator
-import generator
+
 
 SN = 3
 PN = 24
@@ -43,7 +31,7 @@ T_G_HEIGHT, T_G_WIDTH = 224, 224
 T_G_SEED = 1337
 
 
-def triplet_hard_loss(y_true, y_pred):
+def triplet_hard_loss(_, y_pred):
     ######################################################################################
 
     embeddings = y_pred
@@ -77,7 +65,7 @@ def euclidean_distance(vects):
     return K.sqrt(K.maximum(K.sum(K.square(x - y), axis=1, keepdims=True), K.epsilon()))
 
 
-def accuracy(y_true, y_pred):
+def accuracy(_, y_pred):
     return K.mean(y_pred[:, 0, 0] < y_pred[:, 1, 0])
 
 
@@ -129,7 +117,8 @@ def create_model():
         layer.trainable = True
 
     # Variable Learning Rate per Layers
-    optimizer = Adam(lr=0.01, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=True)
+    optimizer = Adam(lr=0.001)
+    #model.compile(loss=tfa.losses.TripletSemiHardLoss(), optimizer=optimizer, metrics=[accuracy])
     model.compile(loss=triplet_hard_loss, optimizer=optimizer, metrics='accuracy')
     model.summary()
 
@@ -156,7 +145,8 @@ def main():
     SPE = len(gen.Y_train) / config.EPOCHS
     print(SPE)
 
-    model.fit(gen.localSet(),
+
+    model.fit(gen.newLocalSet(),
               steps_per_epoch=config.SPE,
               epochs=config.EPOCHS,
               shuffle=False,

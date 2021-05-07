@@ -8,10 +8,13 @@ import keras.layers as kl
 
 import tensorflow_addons as tfa # Pre pouzitie triplet loss priamo z TF
 
-import config
+import numpy as np
 
-# My generator
+# My imports
+import config
 import generator
+
+
 
 SN = 3
 PN = 24
@@ -115,7 +118,9 @@ def create_model():
 
     # Variable Learning Rate per Layers
     optimizer = Adam(lr=0.001)
-    model.compile(loss=tfa.losses.TripletSemiHardLoss(), optimizer=optimizer, metrics=[accuracy])
+    #model.compile(loss=tfa.losses.TripletSemiHardLoss(), optimizer=optimizer, metrics=[accuracy])
+    model.compile(loss=triplet_hard_loss, optimizer=optimizer, metrics=[accuracy])
+    
     model.summary()
 
     return model
@@ -141,7 +146,8 @@ def main():
     SPE = len(gen.Y_train) / config.EPOCHS
     print(SPE)
 
-    model.fit(gen.localSet(),
+
+    model.fit(gen.newLocalSet(),
               steps_per_epoch=config.SPE,
               epochs=config.EPOCHS,
               shuffle=False,

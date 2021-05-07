@@ -1,3 +1,9 @@
+# SIAM MODEL - binary crossentropy
+# 
+#
+import os
+
+from keras.callbacks import ModelCheckpoint
 from keras.layers import Dense, Activation, Conv2D, Flatten, MaxPooling2D, Dropout, Input
 from keras.layers import Dense
 from keras import Model
@@ -6,6 +12,7 @@ from keras.layers.core import Lambda
 import numpy as np
 from keras import backend as K
 import cv2
+
 
 import config
 import generator
@@ -105,7 +112,16 @@ def main():
     # tensorflow devices (GPU) print
     # print(device_lib.list_local_devices())
 
+    checkpoint_path = os.getcwd() + "/checkpoint"
+    if not os.path.exists(checkpoint_path):
+        os.mkdir(checkpoint_path)
+
+
     model = create_model(input_shape=config.INPUT_SHAPE)
+
+    filepath = checkpoint_path + "/weights-improvement-epoch-{epoch:02d}-val-{val_accuracy:.2f}.hdf5"
+    checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
+    callbacks_list = [checkpoint]
 
     print("Start training ")
     print("Loading files...")
@@ -123,7 +139,8 @@ def main():
               validation_steps=config.VSTEPS,
               validation_batch_size=config.BATCH_SIZE,
               shuffle=False,
-              use_multiprocessing=False)
+              use_multiprocessing=False,
+              callbacks=callbacks_list)
 
 
 if __name__ == "__main__":

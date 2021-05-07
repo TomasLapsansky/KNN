@@ -131,7 +131,6 @@ class MyGenerator():
 
     def newLocalSet(self):
         
-        
         anchor =   []
         positive = []
         negative = []
@@ -162,6 +161,8 @@ class MyGenerator():
                 anchor.append(img_A)
                 positive.append(img_P)
                 negative.append(img_N)
+
+
 
             self.anchor = np.array(anchor)
             self.positive = np.array(positive)
@@ -225,6 +226,7 @@ class MyGenerator():
                 positive.append(img_P)
                 negative.append(img_N)
 
+            print(" Pripraveny  ")
             self.anchor = np.array(anchor)
             self.positive = np.array(positive)
             self.negative = np.array(negative)

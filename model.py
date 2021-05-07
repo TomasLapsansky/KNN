@@ -123,19 +123,34 @@ def main():
     checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
     callbacks_list = [checkpoint]
 
+
+
     print("Start training ")
-    print("Loading files...")
+    
 
     path = config.VERI_DATASET + 'train_label.xml'
     batch = config.BATCH_SIZE
     lenitem = batch
 
-    gen = generator.MyGenerator(path, batch, lenitem)
-    model.fit(gen.localSet(),
-              steps_per_epoch=config.SPE,
+    print("Init generators ...")
+
+    dataframe = generator.loadXML(path)
+
+    split = round(len(dataframe.index)*config.TESTTRAIN)
+    
+    df1_test = dataframe.iloc[:split, :]
+    df2_train = dataframe.iloc[split:, :]
+
+    gen_test  = generator.MyGenerator(path, lenitem, df = df1_test)
+    gen_train = generator.MyGenerator(path, lenitem, df = df2_train)
+
+    print("Strart training ...")
+
+    model.fit(gen_train.localSet(),
               epochs=config.EPOCHS,
+              steps_per_epoch=config.SPE,
               batch_size=config.BATCH_SIZE,
-              validation_data=gen.localValidation(),
+              validation_data=gen_test.localSet(),
               validation_steps=config.VSTEPS,
               validation_batch_size=config.BATCH_SIZE,
               shuffle=False,

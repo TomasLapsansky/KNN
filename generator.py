@@ -12,14 +12,15 @@ T_G_SEED = 1337
 
 class MyGenerator():
 
-    def __init__(self,path, batch, lenitem):
-        self.df = self.loadXML(path)
+    def __init__(self,path_xml, mydir, batch, lenitem):
+        self.df = self.loadXML(path_xml)
         self.batch = batch
         self.lenItem = lenitem
         self.anchor = []
         self.positive = []
         self.negative = []
         self.Y_train = []
+        self.mydir = mydir
 
         self.datagen = ImageDataGenerator(width_shift_range=0.05,
                                  height_shift_range=0.05,
@@ -62,7 +63,7 @@ class MyGenerator():
         anchor =   []
         positive = []
         negative = []
-        dirc=config.VERI_DATASET+"image_train/"
+        dirc=config.VERI_DATASET+self.mydir
         while True:
             for i in range(self.lenItem):
 
@@ -134,7 +135,7 @@ class MyGenerator():
         anchor =   []
         positive = []
         negative = []
-        dirc=config.VERI_DATASET+"image_train/"
+        dirc=config.VERI_DATASET+self.mydir
         while True:
             for i in range(self.lenItem):
 

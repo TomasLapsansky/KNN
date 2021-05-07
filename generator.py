@@ -189,3 +189,65 @@ class MyGenerator():
                     X2i = genX2.next()
                     X3i = genX3.next()
                     yield [X1i[0], X2i[0], X3i[0]], X1i[1]
+
+
+    def newLocalSet1(self):
+
+
+        anchor =   []
+        positive = []
+        negative = []
+        dirc=config.VERI_DATASET+self.mydir
+        while True:
+            for i in range(self.lenItem):
+
+                # Load random sample from data frame
+                row = self.df.sample()
+
+                # Load car ID and image name for anchor
+                car_A, name_A = row['vehicleID'].values[0], row['imageName'].values[0]
+
+                # Load car ID and image name for positive
+                positive_row = (self.df.loc[self.df['vehicleID'] == car_A]).sample()
+                car_P, name_P = positive_row['vehicleID'].values[0], positive_row['imageName'].values[0]
+
+                # Load car ID and image name for negative
+                negative_row = (self.df.loc[self.df['vehicleID'] != car_A]).sample()
+                car_N, name_N = negative_row['vehicleID'].values[0], negative_row['imageName'].values[0]
+
+
+
+                img_A = self.load_img(dirc+name_A)
+                img_P = self.load_img(dirc+name_P)
+                img_N = self.load_img(dirc+name_N)
+
+                anchor.append(img_A)
+                positive.append(img_P)
+                negative.append(img_N)
+
+            self.anchor = np.array(anchor)
+            self.positive = np.array(positive)
+            self.negative = np.array(negative)
+
+            anchor =   []
+            positive = []
+            negative = []
+
+            self.Y_train = np.random.randint(2, size=(1,2,self.anchor.shape[0])).T
+
+            X1 = self.anchor
+            X2 = self.positive
+            X3 = self.negative
+            Y = self.Y_train
+            b = self.batch
+
+        # Funkcia prebrata z https://github.com/noelcodella/tripletloss-keras-tensorflow/blob/master/tripletloss.py
+            local_seed = T_G_SEED
+            genX1 = self.datagen.flow(X1,Y, batch_size=b, seed=local_seed, shuffle=False)
+            genX2 = self.datagen.flow(X2,Y, batch_size=b, seed=local_seed, shuffle=False)
+            genX3 = self.datagen.flow(X3,Y, batch_size=b, seed=local_seed, shuffle=False)
+            while True:
+                    X1i = genX1.next()
+                    X2i = genX2.next()
+                    X3i = genX3.next()
+                    yield [X1i[0], X2i[0], X3i[0]]

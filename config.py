@@ -4,9 +4,9 @@ import shutil
 INPUT_SHAPE = (224, 224, 3)
 
 EPOCHS = 50
-BATCH_SIZE = 16
+BATCH_SIZE = 64
 SPE = 200
-VSTEPS = 20
+VSTEPS = 100
 
 try:
     print("Scratchdir exists")

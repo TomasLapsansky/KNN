@@ -124,8 +124,12 @@ def create_model():
 
     # Setting up optimizer designed for variable learning rate
 
+    trainable = False               # Nastavovanie trenovania vrstiev
     for layer in model.layers:
-        layer.trainable = True
+        if layer.name == "conv5_block1_out":
+            trainable = True
+        layer.trainable = trainable
+
 
     # Variable Learning Rate per Layers
     optimizer = Adam(lr=0.001)
@@ -154,16 +158,26 @@ def main():
 
     print("\n" * 5)
 
+
+
     
     path_train = config.VERI_DATASET + 'train_label.xml'
     path_test = config.VERI_DATASET + 'test_label.xml'
     batch = config.BATCH_SIZE
     lenitem = batch
 
-    
+    print("Init generators ...")
 
-    gen_train = generator.MyGenerator(path_train, "image_train/", batch, lenitem)
-    gen_val = generator.MyGenerator(path_test, "image_test/", batch, lenitem)
+    dataframe = generator.loadXML(path)
+
+    split = round(len(dataframe.index)*config.TESTTRAIN)
+    
+    df1_test = dataframe.iloc[:split, :]
+    df2_train = dataframe.iloc[split:, :]
+
+    gen_val  = generator.MyGenerator(path, lenitem, df = df1_test)
+    gen_train = generator.MyGenerator(path, lenitem, df = df2_train)    
+
     SPE = len(gen_train.Y_train) / config.EPOCHS
     print(SPE)
 

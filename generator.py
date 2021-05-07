@@ -185,21 +185,20 @@ class MyGenerator():
             genX1 = self.datagen.flow(X1,Y, batch_size=b, seed=local_seed, shuffle=False)
             genX2 = self.datagen.flow(X2,Y, batch_size=b, seed=local_seed, shuffle=False)
             genX3 = self.datagen.flow(X3,Y, batch_size=b, seed=local_seed, shuffle=False)
-            while True:
-                    X1i = genX1.next()
-                    X2i = genX2.next()
-                    X3i = genX3.next()
-                    yield [X1i[0], X2i[0], X3i[0]], X1i[1]
+            
+            X1i = genX1.next()
+            X2i = genX2.next()
+            X3i = genX3.next()
+            yield [X1i[0], X2i[0], X3i[0]], X1i[1]
 
 
     def newLocalSet1(self):
 
-
-        anchor =   []
-        positive = []
-        negative = []
         dirc=config.VERI_DATASET+self.mydir
         while True:
+            anchor =   []
+            positive = []
+            negative = []
             for i in range(self.lenItem):
 
                 # Load random sample from data frame
@@ -230,9 +229,7 @@ class MyGenerator():
             self.positive = np.array(positive)
             self.negative = np.array(negative)
 
-            anchor =   []
-            positive = []
-            negative = []
+            
 
             self.Y_train = np.random.randint(2, size=(1,2,self.anchor.shape[0])).T
 

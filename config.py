@@ -3,9 +3,9 @@ import shutil
 
 INPUT_SHAPE = (224, 224, 3)
 
-EPOCHS = 100
-BATCH_SIZE = 64
-SPE = 150
+EPOCHS = 20
+BATCH_SIZE = 128
+SPE = 200
 VSTEPS = round(SPE/2)
 TESTTRAIN = 0.3
 

@@ -206,6 +206,7 @@ siamese_model = SiameseModel(siamese_network)
 
 try:
     siamese_model = multi_gpu_model(siamese_model, gpus=2)
+    print("MUTLTI GPU RUNNING: OK ^_^  \n\n")
 except:
     print("WARNING: MUTLTI GPU NOT RUNNING !!! \n\n")
     pass

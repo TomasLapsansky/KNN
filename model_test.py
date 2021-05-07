@@ -1,7 +1,7 @@
 import os
 
 from keras.callbacks import ModelCheckpoint
-from keras.utils import multi_gpu_model
+#from keras.utils import multi_gpu_model
 
 
 import tensorflow as tf
@@ -204,12 +204,14 @@ print(SPE)
 
 siamese_model = SiameseModel(siamese_network)
 
+'''
 try:
     siamese_model = multi_gpu_model(siamese_model, gpus=2)
     print("MUTLTI GPU RUNNING: OK ^_^  \n\n")
 except:
     print("WARNING: MUTLTI GPU NOT RUNNING !!! \n\n")
     pass
+'''
 
 siamese_model.compile(optimizer=optimizers.Adam(0.0001))
 

@@ -3,7 +3,7 @@ import shutil
 
 INPUT_SHAPE = (224, 224, 3)
 
-EPOCHS = 10
+EPOCHS = 100
 BATCH_SIZE = 64
 SPE = 150
 VSTEPS = round(SPE/2)

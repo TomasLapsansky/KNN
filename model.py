@@ -1,3 +1,4 @@
+import tensorflow_addons as tfa
 import tensorflow as tf
 import keras
 from keras import backend as K
@@ -29,6 +30,10 @@ identity_num = 751
 # Global pre generatory
 T_G_HEIGHT, T_G_WIDTH = 224, 224
 T_G_SEED = 1337
+
+
+
+
 
 
 def triplet_hard_loss(_, y_pred):
@@ -69,7 +74,9 @@ def accuracy(_, y_pred):
     return K.mean(y_pred[:, 0, 0] < y_pred[:, 1, 0])
 
 
-def create_model():
+
+
+def create_model1():
     emb_size = 776  # number of classes in dataset
 
     print('Creating a model ...')
@@ -119,13 +126,17 @@ def create_model():
     # Variable Learning Rate per Layers
     optimizer = Adam(lr=0.001)
     #model.compile(loss=tfa.losses.TripletSemiHardLoss(), optimizer=optimizer, metrics=[accuracy])
-    model.compile(loss=triplet_hard_loss, optimizer=optimizer, metrics=[accuracy])
+    model.compile(loss=tfa.losses.TripletSemiHardLoss(), optimizer=optimizer, metrics=['accuracy'])
     model.summary()
 
     return model
 
 
 def main():
+
+    
+    print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+
     #tensorflow devices (GPU) print
     print(tf.config.list_physical_devices('GPU'))
 

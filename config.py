@@ -8,6 +8,7 @@ BATCH_SIZE = 64
 SPE = 100
 VSTEPS = round(SPE/2)
 TESTTRAIN = 0.3
+IMAGES = 3
 
 try:
     print("Scratchdir exists")

@@ -15,6 +15,7 @@ from keras import backend as K
 import matplotlib.pyplot as plt
 
 import generator_test as generator
+import cv2
 import config
 
 width, height, _ = config.INPUT_SHAPE
@@ -211,11 +212,13 @@ def visualize(anchor, positive, negative):
 
     fig = plt.figure(figsize=(9, 9))
 
-    axs = fig.subplots(3, 3)
-    for i in range(3):
+    axs = fig.subplots(config.IMAGES, 3)
+    for i in range(config.IMAGES):
         show(axs[i, 0], anchor[i])
         show(axs[i, 1], positive[i])
         show(axs[i, 2], negative[i])
+    plt.show()
+
 
 
 def main():
@@ -242,17 +245,15 @@ def main():
 
         for i in range(10):
             path_test = config.VERI_DATASET + 'test_label.xml'
-            batch = config.BATCH_SIZE
 
-            gen_val = generator.MyGenerator(path_test, "image_test/", batch, config.BATCH_SIZE)
+            gen_val = generator.MyGenerator(path_test, "image_test/", config.IMAGES, config.IMAGES)
 
             anchor, positive, negative = next(gen_val.LocalSet())
-            visualize(anchor, positive, negative)
 
             anchor_embedding, positive_embedding, negative_embedding = (
-                embedding(resnet.preprocess_input(anchor)),
-                embedding(resnet.preprocess_input(positive)),
-                embedding(resnet.preprocess_input(negative)),
+                embedding(anchor),
+                embedding(positive),
+                embedding(anchor),
             )
 
             cosine_similarity = metrics.CosineSimilarity()
@@ -262,6 +263,8 @@ def main():
 
             negative_similarity = cosine_similarity(anchor_embedding, negative_embedding)
             print("Negative similarity", negative_similarity.numpy())
+
+            visualize(anchor, positive, anchor)
 
 
     else:

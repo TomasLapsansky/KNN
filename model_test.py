@@ -177,68 +177,90 @@ class SiameseModel(Model):
         # called automatically.
         return [self.loss_tracker]
 
+def create_checkpoint():
+    checkpoint_path = os.getcwd() + "/checkpoint"
+    if not os.path.exists(checkpoint_path):
+        os.mkdir(checkpoint_path)
 
-"""
-## Training
-
-We are now ready to train our model.
-"""
-
-checkpoint_path = os.getcwd() + "/checkpoint"
-if not os.path.exists(checkpoint_path):
-    os.mkdir(checkpoint_path)
-
-filepath = checkpoint_path + "/weights-improvement-epoch-{epoch:02d}-val-{val_accuracy:.2f}.hdf5"
-checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
-callbacks_list = [checkpoint]
-
-path_train = config.VERI_DATASET + 'train_label.xml'
-path_test = config.VERI_DATASET + 'test_label.xml'
-batch = config.BATCH_SIZE
-lenitem = batch
-
-gen_train = generator.MyGenerator(path_train, "image_train/", batch, lenitem)
-gen_val = generator.MyGenerator(path_test, "image_test/", batch, lenitem)
-SPE = len(gen_train.Y_train) / config.EPOCHS
-print(SPE)
-
-siamese_model = SiameseModel(siamese_network)
-
-'''
-try:
-    siamese_model = multi_gpu_model(siamese_model, gpus=2)
-    print("MUTLTI GPU RUNNING: OK ^_^  \n\n")
-except:
-    print("WARNING: MUTLTI GPU NOT RUNNING !!! \n\n")
-    pass
-'''
-
-siamese_model.compile(optimizer=optimizers.Adam(0.0001))
-
-siamese_model.fit(gen_train.newLocalSet1(),
-                  steps_per_epoch=config.SPE,
-                  validation_data=gen_val.newLocalSet1(),
-                  epochs=config.EPOCHS,
-                  validation_steps=config.VSTEPS,
-                  shuffle=False,
-                  use_multiprocessing=False,
-                  callbacks=callbacks_list)
+    filepath = checkpoint_path + "/weights-improvement-epoch-{epoch:02d}-val-{val_accuracy:.2f}.hdf5"
+    checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
+    callbacks_list = [checkpoint]
+    return callbacks_list
 
 
+def parseArgs():
+    parser = argparse.ArgumentParser(description='Directory with captured samples')
+    parser.add_argument('-c', action='store', dest='checkpoint',
+                        help='Checkpoint file', default=None)
+    parser.add_argument('-o', action='store_true', dest='optimized',
+                        help='Optimized file loading for large RAM', default=False)
 
-for i in range(10):
-    anchor, positive, negative = next(gen_val.newLocalSet1())
+    return parser.parse_args()
 
-    anchor_embedding, positive_embedding, negative_embedding = (
-        embedding(resnet.preprocess_input(anchor)),
-        embedding(resnet.preprocess_input(positive)),
-        embedding(resnet.preprocess_input(negative)),
-    )
+def main():
+    """
+    ## Training
 
-    cosine_similarity = metrics.CosineSimilarity()
+    We are now ready to train our model.
+    """
 
-    positive_similarity = cosine_similarity(anchor_embedding, positive_embedding)
-    print("Positive similarity:", positive_similarity.numpy())
+    arguments = parseArgs()
 
-    negative_similarity = cosine_similarity(anchor_embedding, negative_embedding)
-    print("Negative similarity", negative_similarity.numpy())
+    siamese_model = SiameseModel(siamese_network)
+
+    siamese_model.compile(optimizer=optimizers.Adam(0.0001))
+
+    if (arguments.checkpoint != None):
+        
+        checkpoint = arguments.checkpoint
+        print("Using checkpoint", checkpoint)
+        if (not os.path.exists(checkpoint)):
+            print("Checkpoint nenajdeny")
+            exit(1)
+        siamese_model.load_weights(checkpoint)
+        
+        for i in range(10):
+
+            anchor, positive, negative = next(gen_val.newLocalSet1())
+
+            anchor_embedding, positive_embedding, negative_embedding = (
+                embedding(resnet.preprocess_input(anchor)),
+                embedding(resnet.preprocess_input(positive)),
+                embedding(resnet.preprocess_input(negative)),
+            )
+
+            cosine_similarity = metrics.CosineSimilarity()
+
+            positive_similarity = cosine_similarity(anchor_embedding, positive_embedding)
+            print("Positive similarity:", positive_similarity.numpy())
+
+            negative_similarity = cosine_similarity(anchor_embedding, negative_embedding)
+            print("Negative similarity", negative_similarity.numpy())
+    
+    
+    else:
+        callbacks_list = create_checkpoint()
+
+        path_train = config.VERI_DATASET + 'train_label.xml'
+        path_test = config.VERI_DATASET + 'test_label.xml'
+        batch = config.BATCH_SIZE
+        lenitem = batch
+
+        gen_train = generator.MyGenerator(path_train, "image_train/", batch, lenitem)
+        gen_val = generator.MyGenerator(path_test, "image_test/", batch, lenitem)
+        SPE = len(gen_train.Y_train) / config.EPOCHS
+        print(SPE)
+        
+        siamese_model.fit(gen_train.newLocalSet1(),
+                        steps_per_epoch=config.SPE,
+                        validation_data=gen_val.newLocalSet1(),
+                        epochs=config.EPOCHS,
+                        validation_steps=config.VSTEPS,
+                        shuffle=False,
+                        use_multiprocessing=False,
+                        callbacks=callbacks_list)
+        print("Train done")
+
+
+
+

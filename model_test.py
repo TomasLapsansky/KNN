@@ -2,7 +2,7 @@ import argparse
 import os
 
 from keras.callbacks import ModelCheckpoint
-#from keras.utils import multi_gpu_model
+# from keras.utils import multi_gpu_model
 
 
 import tensorflow as tf
@@ -178,6 +178,7 @@ class SiameseModel(Model):
         # called automatically.
         return [self.loss_tracker]
 
+
 def create_checkpoint():
     checkpoint_path = os.getcwd() + "/checkpoint"
     if not os.path.exists(checkpoint_path):
@@ -198,6 +199,7 @@ def parseArgs():
 
     return parser.parse_args()
 
+
 def main():
     """
     ## Training
@@ -212,16 +214,15 @@ def main():
     siamese_model.compile(optimizer=optimizers.Adam(0.0001))
 
     if (arguments.checkpoint != None):
-        
+
         checkpoint = arguments.checkpoint
         print("Using checkpoint", checkpoint)
         if (not os.path.exists(checkpoint)):
             print("Checkpoint nenajdeny")
             exit(1)
         siamese_model.load_weights(checkpoint)
-        
+
         for i in range(10):
-            
             path_test = config.VERI_DATASET + 'test_label.xml'
             batch = config.BATCH_SIZE
 
@@ -242,8 +243,8 @@ def main():
 
             negative_similarity = cosine_similarity(anchor_embedding, negative_embedding)
             print("Negative similarity", negative_similarity.numpy())
-    
-    
+
+
     else:
         callbacks_list = create_checkpoint()
 
@@ -256,17 +257,17 @@ def main():
         gen_val = generator.MyGenerator(path_test, "image_test/", batch, lenitem)
         SPE = len(gen_train.Y_train) / config.EPOCHS
         print(SPE)
-        
+
         siamese_model.fit(gen_train.newLocalSet1(),
-                        steps_per_epoch=config.SPE,
-                        validation_data=gen_val.newLocalSet1(),
-                        epochs=config.EPOCHS,
-                        validation_steps=config.VSTEPS,
-                        shuffle=False,
-                        use_multiprocessing=False,
-                        callbacks=callbacks_list)
+                          steps_per_epoch=config.SPE,
+                          validation_data=gen_val.newLocalSet1(),
+                          epochs=config.EPOCHS,
+                          validation_steps=config.VSTEPS,
+                          shuffle=False,
+                          use_multiprocessing=False,
+                          callbacks=callbacks_list)
         print("Train done")
 
 
-
-
+if __name__ == "_main_":
+    main()

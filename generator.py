@@ -6,6 +6,7 @@ import config
 import cv2
 import keras
 from keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras import metrics
 
 
 class MyGenerator():
@@ -93,6 +94,87 @@ class MyGenerator():
                 anchor.append(img_A)
                 positive.append(img_P)
                 negative.append(img_N)
+
+            self.anchor = np.array(anchor)
+            self.positive = np.array(positive)
+            self.negative = np.array(negative)
+
+            yield [self.anchor, self.positive, self.negative]
+
+
+    def miningGen(self,embedding=None):
+
+        dirc = config.VERI_DATASET + self.mydir
+        while True:
+            anchor = []
+            positive = []
+            negative = []
+
+            for i in range(self.lenItem):
+                # Load random sample from data frame
+                row = self.df.sample()
+
+                # Load car ID and image name for anchor
+                car_A, name_A, color, = row['vehicleID'].values[0], row['imageName'].values[0], row['colorID'].values[0]
+
+                
+
+                # Load car ID and image name for positive
+                positive_row = (self.df.loc[self.df['vehicleID'] == car_A]).sample()
+                car_P, name_P = positive_row['vehicleID'].values[0], positive_row['imageName'].values[0]
+
+
+                if(embedding== None):
+                    negative_row = (self.df.loc[self.df['vehicleID'] != car_A])
+                    # Load car ID and image name for negative
+                    negative_row = (negative_row.loc[negative_row['colorID'] != color]).sample()
+                    car_N, name_N = negative_row['vehicleID'].values[0], negative_row['imageName'].values[0]
+
+                    img_A = self.load_img(dirc + name_A)
+                    img_P = self.load_img(dirc + name_P)
+                    img_N = self.load_img(dirc + name_N)
+
+                    anchor.append(img_A)
+                    positive.append(img_P)
+                    negative.append(img_N)
+
+                else:
+
+                    img_A = self.load_img(dirc + name_A)
+                    positive = self.load_img(dirc + name_P)
+
+                    negat_sim = 0
+                    margin = 0.5
+
+                    list_emb = []
+
+                    for i in range(0, config.MINI_BATCH_SIZE):
+                        negative_row = (self.df.loc[self.df['vehicleID'] != car_A])
+                        car_N, name_N = negative_row['vehicleID'].values[0], negative_row['imageName'].values[0]
+                        negative_i = self.load_img(dirc + name_N)
+                        
+                        anchor_embedding, positive_embedding, negative_embedding = (
+                            embedding(img_A),
+                            embedding(img_P),
+                            embedding(negative_i),
+                        )
+
+                        cosine_similarity = metrics.CosineSimilarity()
+
+                        negative_similarity = cosine_similarity(anchor_embedding, negative_embedding)
+                        negat_sim = negative_similarity.numpy()
+
+                        positive_similarity = cosine_similarity(anchor_embedding, positive_embedding)
+                        posit_sim = positive_similarity.numpy()
+
+                        out_sim = posit_sim - negat_sim
+                        list_emb.append([out_sim,name_N])
+
+                    img_N = self.load_img(dirc + min(list_emb,key=lambda item:item[0])[1])
+
+                    anchor.append(img_A)
+                    positive.append(img_P)
+                    negative.append(img_N)
 
             self.anchor = np.array(anchor)
             self.positive = np.array(positive)

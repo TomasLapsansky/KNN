@@ -92,9 +92,7 @@ distances = DistanceLayer()(
     embedding(negative_input),
 )
 
-siamese_network = Model(
-    inputs=[anchor_input, positive_input, negative_input], outputs=distances
-)
+siamese_network = Model( inputs=[anchor_input, positive_input, negative_input], outputs=distances )
 
 """
 ## Putting everything together
@@ -178,7 +176,7 @@ class SiameseModel(Model):
     def metrics(self):
         # We need to list our metrics here so the `reset_states()` can be
         # called automatically.
-        return [self.loss_tracker]
+        return [self.loss_tracker,self.acc_tracker] # EDIT < NEUPRAVILI SME TO MALO BY TO TAM BYT @FILIP
 
 
 def create_checkpoint():
@@ -218,7 +216,6 @@ def visualize(anchor, positive, negative):
         show(axs[i, 1], positive[i])
         show(axs[i, 2], negative[i])
     plt.show()
-
 
 
 def main():
@@ -279,16 +276,23 @@ def main():
         gen_val = generator.MyGenerator(path_test, "image_test/", batch, lenitem)
         SPE = len(gen_train.Y_train) / config.EPOCHS
         print(SPE)
+        
+        model_in = None
+        for i in range(1,config.config.EPOCHS):
 
-        siamese_model.fit(gen_train.LocalSet(),
-                          steps_per_epoch=config.SPE,
-                          validation_data=gen_val.LocalSet(),
-                          epochs=config.EPOCHS,
-                          validation_steps=config.VSTEPS,
-                          shuffle=False,
-                          use_multiprocessing=False,
-                          callbacks=callbacks_list)
-        print("Train done")
+            if(i!=1):
+                model_in = embedding
+            
+
+            siamese_model.fit(gen_train.miningGen(model=model_in),
+                            steps_per_epoch=1,
+                            validation_data=gen_val.miningGen(),
+                            epochs=config.EPOCHS,
+                            validation_steps=config.VSTEPS,
+                            shuffle=False,
+                            use_multiprocessing=False,
+                            callbacks=callbacks_list)
+            
 
 
 if __name__ == "__main__":

@@ -284,7 +284,7 @@ def main():
                 model_in = embedding
             
 
-            siamese_model.fit(gen_train.miningGen(model=model_in),
+            siamese_model.fit(gen_train.miningGen(emb_model=model_in),
                             steps_per_epoch=1,
                             validation_data=gen_val.miningGen(),
                             epochs=config.EPOCHS,

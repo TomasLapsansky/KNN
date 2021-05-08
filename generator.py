@@ -102,7 +102,7 @@ class MyGenerator():
             yield [self.anchor, self.positive, self.negative]
 
 
-    def miningGen(self,embedding=None):
+    def miningGen(self,emb_model=None):
 
         dirc = config.VERI_DATASET + self.mydir
         while True:
@@ -154,9 +154,9 @@ class MyGenerator():
                         negative_i = self.load_img(dirc + name_N)
                         
                         anchor_embedding, positive_embedding, negative_embedding = (
-                            embedding(img_A),
-                            embedding(img_P),
-                            embedding(negative_i),
+                            emb_model(img_A),
+                            emb_model(img_P),
+                            emb_model(negative_i),
                         )
 
                         cosine_similarity = metrics.CosineSimilarity()

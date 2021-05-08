@@ -1,194 +1,294 @@
-import tensorflow_addons as tfa
+import argparse
+import os
+
+from keras.callbacks import ModelCheckpoint
+# from keras.utils import multi_gpu_model
+
+
 import tensorflow as tf
-import keras
+from tensorflow.keras import layers
+from tensorflow.keras import optimizers
+from tensorflow.keras import metrics
+from tensorflow.keras import Model
+from tensorflow.keras.applications import resnet
 from keras import backend as K
-from keras.optimizers import Adam
-from keras.models import Model
+import matplotlib.pyplot as plt
 
-import keras.layers as kl
-
-import tensorflow_addons as tfa # Pre pouzitie triplet loss priamo z TF
-
-import numpy as np
-
-# My imports
+import generator as generator
+import cv2
 import config
-import generator
+
+width, height, _ = config.INPUT_SHAPE
+target_shape = (width, height)
+"""
+## Setting up the embedding generator model
+
+Our Siamese Network will generate embeddings for each of the images of the
+triplet. To do this, we will use a ResNet50 model pretrained on ImageNet and
+connect a few `Dense` layers to it so we can learn to separate these
+embeddings.
+
+We will freeze the weights of all the layers of the model up until the layer `conv5_block1_out`.
+This is important to avoid affecting the weights that the model has already learned.
+We are going to leave the bottom few layers trainable, so that we can fine-tune their weights
+during training.
+"""
+
+base_cnn = resnet.ResNet50(
+    weights="imagenet", input_shape=target_shape + (3,), include_top=False
+)
+
+flatten = layers.Flatten()(base_cnn.output)
+dense1 = layers.Dense(512, activation="relu")(flatten)
+dense1 = layers.BatchNormalization()(dense1)
+dense2 = layers.Dense(256, activation="relu")(dense1)
+dense2 = layers.BatchNormalization()(dense2)
+output = layers.Dense(256)(dense2)
+
+embedding = Model(base_cnn.input, output, name="Embedding")
+
+trainable = False
+for layer in base_cnn.layers:
+    if layer.name == "conv5_block1_out":
+        trainable = True
+    layer.trainable = trainable
+
+"""
+## Setting up the Siamese Network model
+
+The Siamese network will receive each of the triplet images as an input,
+generate the embeddings, and output the distance between the anchor and the
+positive embedding, as well as the distance between the anchor and the negative
+embedding.
+
+To compute the distance, we can use a custom layer `DistanceLayer` that
+returns both values as a tuple.
+"""
 
 
+class DistanceLayer(layers.Layer):
+    """
+    This layer is responsible for computing the distance between the anchor
+    embedding and the positive embedding, and the anchor embedding and the
+    negative embedding.
+    """
 
-SN = 3
-PN = 24
-identity_num = 751
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
-# TRENOVANIE A VYTVORENIE SETU
-# https://github.com/noelcodella/tripletloss-keras-tensorflow/blob/master/tripletloss.py
-
-# https://github.com/michuanhaohao/keras_reid/blob/master/reid_tripletcls.py
-
-
-# Global pre generatory
-T_G_HEIGHT, T_G_WIDTH = 224, 224
-T_G_SEED = 1337
-
-
+    def call(self, anchor, positive, negative):
+        ap_distance = tf.reduce_sum(tf.square(anchor - positive), -1)
+        an_distance = tf.reduce_sum(tf.square(anchor - negative), -1)
+        return (ap_distance, an_distance)
 
 
+anchor_input = layers.Input(name="anchor", shape=target_shape + (3,))
+positive_input = layers.Input(name="positive", shape=target_shape + (3,))
+negative_input = layers.Input(name="negative", shape=target_shape + (3,))
+
+distances = DistanceLayer()(
+    embedding(anchor_input),
+    embedding(positive_input),
+    embedding(negative_input),
+)
+
+siamese_network = Model(
+    inputs=[anchor_input, positive_input, negative_input], outputs=distances
+)
+
+"""
+## Putting everything together
+
+We now need to implement a model with custom training loop so we can compute
+the triplet loss using the three embeddings produced by the Siamese network.
+
+Let's create a `Mean` metric instance to track the loss of the training process.
+"""
 
 
-def triplet_hard_loss(_, y_pred):
-    ######################################################################################
+class SiameseModel(Model):
+    """The Siamese Network model with a custom training and testing loops.
 
-    embeddings = y_pred
-    anchor_positive = embeddings[0] + embeddings[1]
-    negative = embeddings[2]
+    Computes the triplet loss using the three embeddings produced by the
+    Siamese Network.
 
-    # Compute pairwise distance between all of anchor-positive
-    dot_product = K.dot(anchor_positive, K.transpose(anchor_positive))
-    square = K.square(anchor_positive)
-    a_p_distance = K.reshape(K.sum(square, axis=1), (-1, 1)) - 2. * dot_product + K.sum(K.transpose(square),
-                                                                                        axis=0) + 1e-6
-    a_p_distance = K.maximum(a_p_distance, 0.0)  ## Numerical stability
+    The triplet loss is defined as:
+       L(A, P, N) = max(‖f(A) - f(P)‖² - ‖f(A) - f(N)‖² + margin, 0)
+    """
 
-    # Compute distance between anchor and negative
-    dot_product_2 = K.dot(anchor_positive, K.transpose(negative))
-    negative_square = K.square(negative)
-    a_n_distance = K.reshape(K.sum(square, axis=1), (-1, 1)) - 2. * dot_product_2 + K.sum(K.transpose(negative_square),
-                                                                                          axis=0) + 1e-6
-    a_n_distance = K.maximum(a_n_distance, 0.0)  ## Numerical stability
+    def __init__(self, siamese_network, margin=0.5):
+        super(SiameseModel, self).__init__()
+        self.siamese_network = siamese_network
+        self.margin = margin
+        self.loss_tracker = metrics.Mean(name="loss")
+        self.acc_tracker = metrics.Mean(name="accuracy")
 
-    hard_negative = K.reshape(K.min(a_n_distance, axis=1), (-1, 1))
+    def call(self, inputs):
+        return self.siamese_network(inputs)
 
-    distance = (a_p_distance - hard_negative + 0.2)
-    loss = K.mean(K.maximum(distance, 0.0)) / (2.)
+    def train_step(self, data):
+        # GradientTape is a context manager that records every operation that
+        # you do inside. We are using it here to compute the loss so we can get
+        # the gradients and apply them using the optimizer specified in
+        # `compile()`.
+        with tf.GradientTape() as tape:
+            loss = self._compute_loss(data)
+            acc = self._compute_acc(data)
 
-    return loss
+        # Storing the gradients of the loss function with respect to the
+        # weights/parameters.
+        gradients = tape.gradient(loss, self.siamese_network.trainable_weights)
 
+        # Applying the gradients on the model using the specified optimizer
+        self.optimizer.apply_gradients(
+            zip(gradients, self.siamese_network.trainable_weights)
+        )
 
-def triplet_loss(y_true, y_pred):
-    margin = K.constant(1)
-    return K.mean(K.maximum(K.constant(0), K.square(y_pred[:,0,0]) - 0.5*(K.square(y_pred[:,1,0])+K.square(y_pred[:,2,0])) + margin))
+        # Let's update and return the training loss metric.
+        self.loss_tracker.update_state(loss)
+        self.acc_tracker.update_state(acc)
+        return {"loss": self.loss_tracker.result(), "accuracy": self.acc_tracker.result()}
 
-def euclidean_distance(vects):
-    x, y = vects
-    return K.sqrt(K.maximum(K.sum(K.square(x - y), axis=1, keepdims=True), K.epsilon()))
+    def test_step(self, data):
+        loss = self._compute_loss(data)
+        acc = self._compute_acc(data)
 
+        # Let's update and return the loss metric.
+        self.loss_tracker.update_state(loss)
+        self.acc_tracker.update_state(acc)
+        return {"loss": self.loss_tracker.result(), "accuracy": self.acc_tracker.result()}
 
-def accuracy(_, y_pred):
-    return K.mean(y_pred[:, 0, 0] < y_pred[:, 1, 0])
+    def _compute_loss(self, data):
+        # The output of the network is a tuple containing the distances
+        # between the anchor and the positive example, and the anchor and
+        # the negative example.
+        ap_distance, an_distance = self.siamese_network(data)
 
+        # Computing the Triplet Loss by subtracting both distances and
+        # making sure we don't get a negative value.
+        loss = ap_distance - an_distance
+        loss = tf.maximum(loss + self.margin, 0.0)
+        return loss
 
+    def _compute_acc(self, data):
+        ap_distance, an_distance = self.siamese_network(data)
+        return K.mean(ap_distance < an_distance)
 
-
-def create_model():
-    emb_size = 776  # number of classes in dataset
-
-    print('Creating a model ...')
-
-    # Initialize a ResNet50_ImageNet Model
-    resnet_input = kl.Input(shape=config.INPUT_SHAPE)
-    resnet_model = keras.applications.resnet50.ResNet50(weights='imagenet', include_top=False,
-                                                        input_tensor=resnet_input)
-
-    # New Layers over ResNet50
-    net = resnet_model.output
-    # net = kl.Flatten(name='flatten')(net)
-    net = kl.GlobalAveragePooling2D(name='gap')(net)
-    # net = kl.Dropout(0.5)(net)
-    net = kl.Dense(emb_size, activation='relu', name='t_emb_1')(net)
-    net = kl.Lambda(lambda x: K.l2_normalize(x, axis=1), name='t_emb_1_l2norm')(net)
-
-    # model creation
-    base_model = Model(resnet_model.input, net, name="base_model")
-
-    # triplet framework, shared weights
-    input_shape = config.INPUT_SHAPE
-    input_anchor = kl.Input(shape=input_shape, name='input_anchor')
-    input_positive = kl.Input(shape=input_shape, name='input_pos')
-    input_negative = kl.Input(shape=input_shape, name='input_neg')
-
-    net_anchor = base_model(input_anchor)
-    net_positive = base_model(input_positive)
-    net_negative = base_model(input_negative)
-
-    # The Lamda layer produces output using given function. Here its Euclidean distance.
-    positive_dist = kl.Lambda(euclidean_distance, name='pos_dist')([net_anchor, net_positive])
-    negative_dist = kl.Lambda(euclidean_distance, name='neg_dist')([net_anchor, net_negative])
-    tertiary_dist = kl.Lambda(euclidean_distance, name='ter_dist')([net_positive, net_negative])
-
-    # This lambda layer simply stacks outputs so both distances are available to the objective
-    stacked_dists = kl.Lambda(lambda vects: K.stack(vects, axis=-1), name='stacked_dists')(
-        [positive_dist, negative_dist, tertiary_dist])
-
-    model = Model([input_anchor, input_positive, input_negative], stacked_dists, name='triple_siamese')
-
-    # Setting up optimizer designed for variable learning rate
-
-    trainable = False               # Nastavovanie trenovania vrstiev
-    for layer in model.layers:
-        if layer.name == "conv5_block1_out":
-            trainable = True
-        layer.trainable = trainable
+    @property
+    def metrics(self):
+        # We need to list our metrics here so the `reset_states()` can be
+        # called automatically.
+        return [self.loss_tracker]
 
 
-    # Variable Learning Rate per Layers
-    optimizer = Adam(lr=0.001)
-    #model.compile(loss=tfa.losses.TripletSemiHardLoss(), optimizer=optimizer, metrics=[accuracy])
-    model.compile(loss=triplet_loss, optimizer=optimizer, metrics=['accuracy'])
-    model.summary()
+def create_checkpoint():
+    checkpoint_path = os.getcwd() + "/checkpoint"
+    if not os.path.exists(checkpoint_path):
+        os.mkdir(checkpoint_path)
 
-    return model
+    filepath = checkpoint_path + "/weights-improvement-epoch-{epoch:02d}-val-{val_accuracy:.2f}.hdf5"
+    checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
+    callbacks_list = [checkpoint]
+    return callbacks_list
+
+
+def parseArgs():
+    parser = argparse.ArgumentParser(description='Directory with captured samples')
+    parser.add_argument('-c', action='store', dest='checkpoint',
+                        help='Checkpoint file', default=None)
+    parser.add_argument('-o', action='store_true', dest='optimized',
+                        help='Optimized file loading for large RAM', default=False)
+
+    return parser.parse_args()
+
+
+def visualize(anchor, positive, negative):
+    """Visualize a few triplets from the supplied batches."""
+
+    def show(ax, image):
+        ax.imshow(image)
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+    fig = plt.figure(figsize=(9, 9))
+
+    axs = fig.subplots(config.IMAGES, 3)
+    for i in range(config.IMAGES):
+        show(axs[i, 0], anchor[i])
+        show(axs[i, 1], positive[i])
+        show(axs[i, 2], negative[i])
+    plt.show()
+
 
 
 def main():
+    """
+    ## Training
 
-    
-    print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+    We are now ready to train our model.
+    """
 
-    #tensorflow devices (GPU) print
-    print(tf.config.list_physical_devices('GPU'))
+    arguments = parseArgs()
 
-    print("Version of Tensor Flow:", tf.__version__)
+    siamese_model = SiameseModel(siamese_network)
 
-    print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+    siamese_model.compile(optimizer=optimizers.Adam(0.0001))
 
-    
+    if arguments.checkpoint:
+        checkpoint = arguments.checkpoint
+        print("Using checkpoint", checkpoint)
+        if not os.path.exists(checkpoint):
+            print("Checkpoint nenajdeny")
+            exit(1)
+        siamese_model.built = True
+        siamese_model.load_weights(checkpoint)
 
-    model = create_model()
+        for i in range(10):
+            path_test = config.VERI_DATASET + 'test_label.xml'
 
-    print("\n" * 5)
+            gen_val = generator.MyGenerator(path_test, "image_test/", config.IMAGES, config.IMAGES)
 
+            anchor, positive, negative = next(gen_val.LocalSet())
 
+            anchor_embedding, positive_embedding, negative_embedding = (
+                embedding(anchor),
+                embedding(positive),
+                embedding(positive),
+            )
 
-    
-    path_train = config.VERI_DATASET + 'train_label.xml'
-    path_test = config.VERI_DATASET + 'test_label.xml'
-    batch = config.BATCH_SIZE
-    lenitem = batch
+            cosine_similarity = metrics.CosineSimilarity()
 
-    print("Init generators ...")
+            positive_similarity = cosine_similarity(anchor_embedding, positive_embedding)
+            print("Positive similarity:", positive_similarity.numpy())
 
-    dataframe = generator.loadXML(path)
+            negative_similarity = cosine_similarity(anchor_embedding, negative_embedding)
+            print("Negative similarity:", negative_similarity.numpy())
 
-    split = round(len(dataframe.index)*config.TESTTRAIN)
-    
-    df1_test = dataframe.iloc[:split, :]
-    df2_train = dataframe.iloc[split:, :]
-
-    gen_val  = generator.MyGenerator(path, lenitem, df = df1_test)
-    gen_train = generator.MyGenerator(path, lenitem, df = df2_train)    
-
-    SPE = len(gen_train.Y_train) / config.EPOCHS
-    print(SPE)
+            visualize(anchor, positive, positive)
 
 
-    model.fit(gen_train.newLocalSet(),
-              steps_per_epoch=config.SPE,
-              validation_data=gen_val.newLocalSet(),
-              epochs=config.EPOCHS,
-              validation_steps= 50,
-              shuffle=False,
-              use_multiprocessing=False)
+    else:
+        callbacks_list = create_checkpoint()
+
+        path_train = config.VERI_DATASET + 'train_label.xml'
+        path_test = config.VERI_DATASET + 'test_label.xml'
+        batch = config.BATCH_SIZE
+        lenitem = batch
+
+        gen_train = generator.MyGenerator(path_train, "image_train/", batch, lenitem)
+        gen_val = generator.MyGenerator(path_test, "image_test/", batch, lenitem)
+        SPE = len(gen_train.Y_train) / config.EPOCHS
+        print(SPE)
+
+        siamese_model.fit(gen_train.LocalSet(),
+                          steps_per_epoch=config.SPE,
+                          validation_data=gen_val.LocalSet(),
+                          epochs=config.EPOCHS,
+                          validation_steps=config.VSTEPS,
+                          shuffle=False,
+                          use_multiprocessing=False,
+                          callbacks=callbacks_list)
+        print("Train done")
 
 
 if __name__ == "__main__":

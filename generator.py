@@ -38,7 +38,7 @@ class MyGenerator():
             data.append([item.attrib['imageName'], item.attrib['vehicleID'],item.attrib['colorID']])
 
         df = pd.DataFrame(data)  # Write in DF and transpose it
-        df.columns = ["imageName", "vehicleID"]  # Update column names
+        df.columns = ["imageName", "vehicleID", "colorID"]  # Update column names
         print("DONE")
         return df
 

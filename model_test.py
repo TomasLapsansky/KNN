@@ -224,18 +224,21 @@ siamese_model.fit(gen_train.newLocalSet1(),
                   use_multiprocessing=False,
                   callbacks=callbacks_list)
 
-anchor, positive, negative = next(gen_val.newLocalSet1())
 
-anchor_embedding, positive_embedding, negative_embedding = (
-    embedding(resnet.preprocess_input(anchor)),
-    embedding(resnet.preprocess_input(positive)),
-    embedding(resnet.preprocess_input(negative)),
-)
 
-cosine_similarity = metrics.CosineSimilarity()
+for i in range(10):
+    anchor, positive, negative = next(gen_val.newLocalSet1())
 
-positive_similarity = cosine_similarity(anchor_embedding, positive_embedding)
-print("Positive similarity:", positive_similarity.numpy())
+    anchor_embedding, positive_embedding, negative_embedding = (
+        embedding(resnet.preprocess_input(anchor)),
+        embedding(resnet.preprocess_input(positive)),
+        embedding(resnet.preprocess_input(negative)),
+    )
 
-negative_similarity = cosine_similarity(anchor_embedding, negative_embedding)
-print("Negative similarity", negative_similarity.numpy())
+    cosine_similarity = metrics.CosineSimilarity()
+
+    positive_similarity = cosine_similarity(anchor_embedding, positive_embedding)
+    print("Positive similarity:", positive_similarity.numpy())
+
+    negative_similarity = cosine_similarity(anchor_embedding, negative_embedding)
+    print("Negative similarity", negative_similarity.numpy())

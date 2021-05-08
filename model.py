@@ -186,7 +186,7 @@ def create_checkpoint():
     if not os.path.exists(checkpoint_path):
         os.mkdir(checkpoint_path)
 
-    filepath = checkpoint_path + "/weights-improvement-epoch-{epoch:02d}-val-{val_accuracy:.2f}.hdf5"
+    filepath = checkpoint_path + "/model.hdf5"
     checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
     callbacks_list = [checkpoint]
     return callbacks_list

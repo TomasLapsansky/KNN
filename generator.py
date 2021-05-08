@@ -124,7 +124,7 @@ class MyGenerator():
                 car_P, name_P = positive_row['vehicleID'].values[0], positive_row['imageName'].values[0]
 
 
-                if(embedding== None):
+                if(emb_model== None):
                     negative_row = (self.df.loc[self.df['vehicleID'] != car_A])
                     # Load car ID and image name for negative
                     negative_row = (negative_row.loc[negative_row['colorID'] != color]).sample()

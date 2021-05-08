@@ -87,9 +87,9 @@ positive_input = layers.Input(name="positive", shape=target_shape + (3,))
 negative_input = layers.Input(name="negative", shape=target_shape + (3,))
 
 distances = DistanceLayer()(
-    embedding(resnet.preprocess_input(anchor_input)),
-    embedding(resnet.preprocess_input(positive_input)),
-    embedding(resnet.preprocess_input(negative_input)),
+    embedding(anchor_input),
+    embedding(positive_input),
+    embedding(negative_input),
 )
 
 siamese_network = Model(

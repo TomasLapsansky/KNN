@@ -36,7 +36,7 @@ class MyGenerator():
         items = root[0]
 
         for i, item in enumerate(items):
-            data.append([item.attrib['imageName'], item.attrib['vehicleID'],item.attrib['colorID']])
+            data.append([item.attrib['imageName'], item.attrib['vehicleID'], item.attrib['colorID']])
 
         df = pd.DataFrame(data)  # Write in DF and transpose it
         df.columns = ["imageName", "vehicleID", "colorID"]  # Update column names
@@ -67,25 +67,20 @@ class MyGenerator():
                 # Load car ID and image name for anchor
                 car_A, name_A, color, = row['vehicleID'].values[0], row['imageName'].values[0], row['colorID'].values[0]
 
-                
-
                 # Load car ID and image name for positive
                 positive_row = (self.df.loc[self.df['vehicleID'] == car_A]).sample()
                 car_P, name_P = positive_row['vehicleID'].values[0], positive_row['imageName'].values[0]
 
-
-
                 negative_row = (self.df.loc[self.df['vehicleID'] != car_A])
-                
-                if(random.random()<0.5):
+
+                if (random.random() < 0.5):
                     # Load car ID and image name for negative
                     negative_row_color = (negative_row.loc[negative_row['colorID'] != color]).sample()
                 else:
                     # Load car ID and image name for negative with same color of car
                     negative_row_color = (negative_row.loc[negative_row['colorID'] == color]).sample()
-                
-                car_N, name_N = negative_row_color['vehicleID'].values[0], negative_row_color['imageName'].values[0]
 
+                car_N, name_N = negative_row_color['vehicleID'].values[0], negative_row_color['imageName'].values[0]
 
                 img_A = self.load_img(dirc + name_A)
                 img_P = self.load_img(dirc + name_P)
@@ -101,8 +96,7 @@ class MyGenerator():
 
             yield [self.anchor, self.positive, self.negative]
 
-
-    def miningGen(self,emb_model=None):
+    def miningGen(self, emb_model=None):
 
         dirc = config.VERI_DATASET + self.mydir
         while True:
@@ -117,14 +111,11 @@ class MyGenerator():
                 # Load car ID and image name for anchor
                 car_A, name_A, color, = row['vehicleID'].values[0], row['imageName'].values[0], row['colorID'].values[0]
 
-                
-
                 # Load car ID and image name for positive
                 positive_row = (self.df.loc[self.df['vehicleID'] == car_A]).sample()
                 car_P, name_P = positive_row['vehicleID'].values[0], positive_row['imageName'].values[0]
 
-
-                if(emb_model== None):
+                if (emb_model == None):
                     negative_row = (self.df.loc[self.df['vehicleID'] != car_A])
                     # Load car ID and image name for negative
                     negative_row = (negative_row.loc[negative_row['colorID'] != color]).sample()
@@ -141,7 +132,7 @@ class MyGenerator():
                 else:
 
                     img_A = self.load_img(dirc + name_A)
-                    positive = self.load_img(dirc + name_P)
+                    img_P = self.load_img(dirc + name_P)
 
                     negat_sim = 0
                     margin = 0.5
@@ -149,14 +140,14 @@ class MyGenerator():
                     list_emb = []
 
                     for i in range(0, config.MINI_BATCH_SIZE):
-                        negative_row = (self.df.loc[self.df['vehicleID'] != car_A])
+                        negative_row = (self.df.loc[self.df['vehicleID'] != car_A]).sample()
                         car_N, name_N = negative_row['vehicleID'].values[0], negative_row['imageName'].values[0]
                         negative_i = self.load_img(dirc + name_N)
-                        
+
                         anchor_embedding, positive_embedding, negative_embedding = (
-                            emb_model(img_A),
-                            emb_model(img_P),
-                            emb_model(negative_i),
+                            emb_model(np.array([img_A])),
+                            emb_model(np.array([img_P])),
+                            emb_model(np.array([negative_i])),
                         )
 
                         cosine_similarity = metrics.CosineSimilarity()
@@ -168,9 +159,9 @@ class MyGenerator():
                         posit_sim = positive_similarity.numpy()
 
                         out_sim = posit_sim - negat_sim
-                        list_emb.append([out_sim,name_N])
+                        list_emb.append([out_sim, name_N])
 
-                    img_N = self.load_img(dirc + min(list_emb,key=lambda item:item[0])[1])
+                    img_N = self.load_img(dirc + min(list_emb, key=lambda item: item[0])[1])
 
                     anchor.append(img_A)
                     positive.append(img_P)

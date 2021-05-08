@@ -220,6 +220,11 @@ def main():
         siamese_model.load_weights(checkpoint)
         
         for i in range(10):
+            
+            path_test = config.VERI_DATASET + 'test_label.xml'
+            batch = config.BATCH_SIZE
+
+            gen_val = generator.MyGenerator(path_test, "image_test/", batch, config.BATCH_SIZE)
 
             anchor, positive, negative = next(gen_val.newLocalSet1())
 

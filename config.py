@@ -3,13 +3,14 @@ import shutil
 
 INPUT_SHAPE = (224, 224, 3)
 
-EPOCHS = 20
+EPOCHS = 50
 BATCH_SIZE = 64
 SPE = 150
 VSTEPS = round(SPE/2)
 TESTTRAIN = 0.3
 IMAGES = 2
 
+'''
 try:
     print("Scratchdir exists")
     scratchdir = os.popen('echo $SCRATCHDIR').read()
@@ -24,6 +25,7 @@ try:
     VERI_DATASET = scratchdir + '/dataset/VeRi/'
 except:
     print("Scratchdir doesn't exist")
-    VERI_DATASET = './dataset/VeRi/'
+'''
+VERI_DATASET = './dataset/VeRi/'
 
 AIC_DATASET = './dataset/AIC21_Track2_ReID/'

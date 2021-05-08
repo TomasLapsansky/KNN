@@ -278,7 +278,7 @@ def main():
         print(SPE)
         
         model_in = None
-        for i in range(1,config.config.EPOCHS):
+        for i in range(1,config.EPOCHS):
 
             if(i!=1):
                 model_in = embedding

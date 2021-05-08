@@ -12,8 +12,9 @@ from tensorflow.keras import metrics
 from tensorflow.keras import Model
 from tensorflow.keras.applications import resnet
 from keras import backend as K
+import matplotlib.pyplot as plt
 
-import generator
+import generator_test as generator
 import config
 
 width, height, _ = config.INPUT_SHAPE
@@ -200,6 +201,23 @@ def parseArgs():
     return parser.parse_args()
 
 
+def visualize(anchor, positive, negative):
+    """Visualize a few triplets from the supplied batches."""
+
+    def show(ax, image):
+        ax.imshow(image)
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+    fig = plt.figure(figsize=(9, 9))
+
+    axs = fig.subplots(3, 3)
+    for i in range(3):
+        show(axs[i, 0], anchor[i])
+        show(axs[i, 1], positive[i])
+        show(axs[i, 2], negative[i])
+
+
 def main():
     """
     ## Training
@@ -213,13 +231,13 @@ def main():
 
     siamese_model.compile(optimizer=optimizers.Adam(0.0001))
 
-    if (arguments.checkpoint != None):
-
+    if arguments.checkpoint:
         checkpoint = arguments.checkpoint
         print("Using checkpoint", checkpoint)
-        if (not os.path.exists(checkpoint)):
+        if not os.path.exists(checkpoint):
             print("Checkpoint nenajdeny")
             exit(1)
+        siamese_model.built = True
         siamese_model.load_weights(checkpoint)
 
         for i in range(10):
@@ -228,7 +246,8 @@ def main():
 
             gen_val = generator.MyGenerator(path_test, "image_test/", batch, config.BATCH_SIZE)
 
-            anchor, positive, negative = next(gen_val.newLocalSet1())
+            anchor, positive, negative = next(gen_val.LocalSet())
+            visualize(anchor, positive, negative)
 
             anchor_embedding, positive_embedding, negative_embedding = (
                 embedding(resnet.preprocess_input(anchor)),
@@ -258,9 +277,9 @@ def main():
         SPE = len(gen_train.Y_train) / config.EPOCHS
         print(SPE)
 
-        siamese_model.fit(gen_train.newLocalSet1(),
+        siamese_model.fit(gen_train.LocalSet(),
                           steps_per_epoch=config.SPE,
-                          validation_data=gen_val.newLocalSet1(),
+                          validation_data=gen_val.LocalSet(),
                           epochs=config.EPOCHS,
                           validation_steps=config.VSTEPS,
                           shuffle=False,
@@ -269,5 +288,5 @@ def main():
         print("Train done")
 
 
-if __name__ == "_main_":
+if __name__ == "__main__":
     main()

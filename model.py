@@ -253,9 +253,11 @@ def main():
         siamese_model.built = True
         siamese_model.load_weights(checkpoint)
 
+        gen_val = generator.MyGenerator(path_test, "image_test/", batch, lenitem)
+
         for i in range(10):
 
-            row = self.df.sample()
+            row = gen_val.df.sample()
 
             # Load car ID and image name for anchor
             car_A, name_A, color, = row['vehicleID'].values[0], row['imageName'].values[0], row['colorID'].values[0]

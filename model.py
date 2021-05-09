@@ -365,7 +365,7 @@ def main():
     else:
         if arguments.train:
             checkpoint = arguments.train
-            print("Using checkpoint", checkpoint)
+            print("Using checkpoint", checkpoint," and continue training")
             if not os.path.exists(checkpoint):
                 print("Checkpoint nenajdeny")
                 exit(1)

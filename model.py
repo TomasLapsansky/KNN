@@ -196,8 +196,11 @@ def parseArgs():
     parser = argparse.ArgumentParser(description='Directory with captured samples')
     parser.add_argument('-c', action='store', dest='checkpoint',
                         help='Checkpoint file', default=None)
+    parser.add_argument('-t', action='store', dest='train',
+                        help='Checkpoint file', default=None)
     parser.add_argument('-o', action='store_true', dest='optimized',
                         help='Optimized file loading for large RAM', default=False)
+
 
     return parser.parse_args()
 
@@ -287,6 +290,7 @@ def main():
     siamese_model.compile(optimizer=optimizers.Adam(0.0001))
 
     if arguments.checkpoint:
+       
         checkpoint = arguments.checkpoint
         print("Using checkpoint", checkpoint)
         if not os.path.exists(checkpoint):
@@ -359,6 +363,15 @@ def main():
         eval(path_test)
 
     else:
+        if(arguments.train != None):
+            checkpoint = arguments.checkpoint
+            print("Using checkpoint", checkpoint)
+            if not os.path.exists(checkpoint):
+                print("Checkpoint nenajdeny")
+                exit(1)
+            siamese_model.built = True
+            siamese_model.load_weights(checkpoint)
+
         callbacks_list = create_checkpoint()
 
         path_train = config.VERI_DATASET + 'train_label.xml'

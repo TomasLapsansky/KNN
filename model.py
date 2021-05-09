@@ -385,7 +385,7 @@ def main():
         print(SPE)
 
         model_in = None
-        for i in range(1, config.EPOCHS):
+        for i in range(1, config.EPOCHS + 1):
             print("EPOCH:" + str(i) + "/" + str(config.EPOCHS))
 
             model_in = embedding

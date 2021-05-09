@@ -228,7 +228,6 @@ def load_i(p2f):
     t_image = cv2.imread(p2f)
     t_image = cv2.resize(t_image, (height, width))
     t_image = t_image.astype("float32")
-    t_image = keras.applications.resnet50.preprocess_input(t_image, data_format='channels_last')
     return t_image
 
 def main():
@@ -296,7 +295,14 @@ def main():
             negative_similarity = cosine_similarity(anchor_embedding, negative_embedding)
             print("Negative similarity:", negative_similarity.numpy())
 
-            visualize(anchor, positive, positive)
+
+            f, axarr = plt.subplots(2,2)
+            axarr[0,0] = plt.imshow(positive)
+            axarr[0,1] = plt.imshow(negative)
+            axarr[1,0] = plt.imshow(anchor)
+            axarr[1,1] = plt.imshow(positive)
+        
+            plt.show()
 
 
     else:

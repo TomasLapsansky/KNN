@@ -243,7 +243,7 @@ def eval(path_test):
         anchor_embedding, positive_embedding, negative_embedding = (
             embedding(keras.applications.resnet50.preprocess_input(np.array([anchor]), data_format='channels_last')),
             embedding(keras.applications.resnet50.preprocess_input(np.array([positive]), data_format='channels_last')),
-            embedding(keras.applications.resnet50.preprocess_input(np.array([positive]), data_format='channels_last')),
+            embedding(keras.applications.resnet50.preprocess_input(np.array([negative]), data_format='channels_last')),
         )
 
         cosine_similarity = metrics.CosineSimilarity()

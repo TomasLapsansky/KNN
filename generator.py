@@ -73,7 +73,7 @@ class MyGenerator():
 
                 negative_row = (self.df.loc[self.df['vehicleID'] != car_A])
 
-                if (random.random() < config.SAMECOLOR):
+                if (True):
                     # Load car ID and image name for negative
                     negative_row_color = (negative_row.loc[negative_row['colorID'] != color]).sample()
                 else:

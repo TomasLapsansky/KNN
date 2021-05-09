@@ -257,7 +257,7 @@ def main():
         lenitem = batch
         
         gen_val = generator.MyGenerator(path_test, "image_test/", batch, lenitem)
-
+        dirc = config.VERI_DATASET + "image_test/"
         for i in range(10):
 
             row = gen_val.df.sample()
@@ -280,7 +280,7 @@ def main():
 
             gen_val = generator.MyGenerator(path_test, "image_test/", config.IMAGES, config.IMAGES)
 
-            anchor, positive, negative = load_i(car_A), load_i(car_P), load_i(car_N)
+            anchor, positive, negative = load_i(dirc + car_A), load_i(dirc + car_P), load_i(dirc + car_N)
 
             anchor_embedding, positive_embedding, negative_embedding = (
                 embedding(keras.applications.resnet50.preprocess_input(anchor, data_format='channels_last')),

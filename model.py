@@ -363,8 +363,8 @@ def main():
         eval(path_test)
 
     else:
-        if(arguments.train != None):
-            checkpoint = arguments.checkpoint
+        if arguments.train:
+            checkpoint = arguments.train
             print("Using checkpoint", checkpoint)
             if not os.path.exists(checkpoint):
                 print("Checkpoint nenajdeny")

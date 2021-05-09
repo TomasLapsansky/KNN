@@ -13,7 +13,7 @@ from tensorflow.keras import Model
 from tensorflow.keras.applications import resnet
 from keras import backend as K
 import matplotlib.pyplot as plt
-
+import numpy as np
 import keras
 
 import generator as generator
@@ -283,9 +283,9 @@ def main():
             anchor, positive, negative = load_i(dirc + name_A), load_i(dirc + name_P), load_i(dirc + name_N)
 
             anchor_embedding, positive_embedding, negative_embedding = (
-                embedding(keras.applications.resnet50.preprocess_input(anchor, data_format='channels_last')),
-                embedding(keras.applications.resnet50.preprocess_input(positive, data_format='channels_last')),
-                embedding(keras.applications.resnet50.preprocess_input(positive, data_format='channels_last')),
+                embedding(keras.applications.resnet50.preprocess_input(np.array([anchor]), data_format='channels_last')),
+                embedding(keras.applications.resnet50.preprocess_input(np.array([positive]), data_format='channels_last')),
+                embedding(keras.applications.resnet50.preprocess_input(np.array([positive]), data_format='channels_last')),
             )
 
             cosine_similarity = metrics.CosineSimilarity()

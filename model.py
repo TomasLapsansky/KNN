@@ -388,10 +388,9 @@ def main():
         for i in range(1, config.EPOCHS):
             print("EPOCH:" + str(i) + "/" + str(config.EPOCHS))
 
-            if (i != 1):
-                model_in = embedding
+            model_in = embedding
 
-            siamese_model.fit(gen_train.LocalSet(),
+            siamese_model.fit(gen_train.miningGen(emb_model=model_in),
                               steps_per_epoch=config.SPE,
                               validation_data=gen_val.LocalSet(),
                               epochs=1,

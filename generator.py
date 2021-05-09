@@ -71,16 +71,8 @@ class MyGenerator():
                 positive_row = (self.df.loc[self.df['vehicleID'] == car_A]).sample()
                 car_P, name_P = positive_row['vehicleID'].values[0], positive_row['imageName'].values[0]
 
-                negative_row = (self.df.loc[self.df['vehicleID'] != car_A])
-
-                if (True):
-                    # Load car ID and image name for negative
-                    negative_row_color = (negative_row.loc[negative_row['colorID'] != color]).sample()
-                else:
-                    # Load car ID and image name for negative with same color of car
-                    negative_row_color = (negative_row.loc[negative_row['colorID'] == color]).sample()
-
-                car_N, name_N = negative_row_color['vehicleID'].values[0], negative_row_color['imageName'].values[0]
+                negative_row = (self.df.loc[self.df['vehicleID'] != car_A]).sample()
+                car_N, name_N = negative_row['vehicleID'].values[0], negative_row['imageName'].values[0]
 
                 img_A = self.load_img(dirc + name_A)
                 img_P = self.load_img(dirc + name_P)

@@ -221,7 +221,7 @@ def visualize(anchor, positive, negative):
 
 
 
-def load_i(self, p2f):
+def load_i(p2f):
 
     height, width, _ = config.INPUT_SHAPE
 

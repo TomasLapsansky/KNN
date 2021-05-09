@@ -252,7 +252,10 @@ def main():
             exit(1)
         siamese_model.built = True
         siamese_model.load_weights(checkpoint)
-
+        path_test = config.VERI_DATASET + 'test_label.xml'
+        batch = config.BATCH_SIZE
+        lenitem = batch
+        
         gen_val = generator.MyGenerator(path_test, "image_test/", batch, lenitem)
 
         for i in range(10):
@@ -263,11 +266,11 @@ def main():
             car_A, name_A, color, = row['vehicleID'].values[0], row['imageName'].values[0], row['colorID'].values[0]
 
             # Load car ID and image name for positive
-            positive_row = (self.df.loc[self.df['vehicleID'] == car_A]).sample()
+            positive_row = (gen_val.df.loc[gen_val.df['vehicleID'] == car_A]).sample()
             car_P, name_P = positive_row['vehicleID'].values[0], positive_row['imageName'].values[0]
 
             
-            negative_row = (self.df.loc[self.df['vehicleID'] != car_A])
+            negative_row = (gen_val.df.loc[gen_val.df['vehicleID'] != car_A])
             # Load car ID and image name for negative
             negative_row = (negative_row.loc[negative_row['colorID'] != color]).sample()
             car_N, name_N = negative_row['vehicleID'].values[0], negative_row['imageName'].values[0]

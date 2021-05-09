@@ -280,7 +280,7 @@ def main():
 
             gen_val = generator.MyGenerator(path_test, "image_test/", config.IMAGES, config.IMAGES)
 
-            anchor, positive, negative = load_i(dirc + car_A), load_i(dirc + car_P), load_i(dirc + car_N)
+            anchor, positive, negative = load_i(dirc + name_A), load_i(dirc + name_P), load_i(dirc + name_N)
 
             anchor_embedding, positive_embedding, negative_embedding = (
                 embedding(keras.applications.resnet50.preprocess_input(anchor, data_format='channels_last')),

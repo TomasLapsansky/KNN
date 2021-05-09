@@ -249,10 +249,10 @@ def eval(path_test):
         cosine_similarity = metrics.CosineSimilarity()
 
         positive_similarity = cosine_similarity(anchor_embedding, positive_embedding)
-        # print("Positive similarity:", positive_similarity.numpy())
+        print("Positive similarity:", positive_similarity.numpy())
 
         negative_similarity = cosine_similarity(anchor_embedding, negative_embedding)
-        # print("Negative similarity:", negative_similarity.numpy())
+        print("Negative similarity:", negative_similarity.numpy())
 
         if positive_similarity > config.THRESHOLD:
             positive_cnt += 1
@@ -295,65 +295,65 @@ def main():
         siamese_model.built = True
         siamese_model.load_weights(checkpoint)
 
-        path_test = config.VERI_DATASET + 'train_label.xml'
-        batch = config.BATCH_SIZE
-        lenitem = batch
-
-        gen_val = generator.MyGenerator(path_test, "image_train/", batch, lenitem)
-        dirc = config.VERI_DATASET + "image_train/"
-        for i in range(10):
-            gen_val.df = gen_val.df.sample(frac=1).reset_index(drop=True)
-            row = gen_val.df.sample()
-
-            # Load car ID and image name for anchor
-            car_A, name_A, color, = row['vehicleID'].values[0], row['imageName'].values[0], row['colorID'].values[0]
-
-            # Load car ID and image name for positive
-            positive_row = (gen_val.df.loc[gen_val.df['vehicleID'] == car_A]).sample()
-            car_P, name_P = positive_row['vehicleID'].values[0], positive_row['imageName'].values[0]
-
-            negative_row = (gen_val.df.loc[gen_val.df['vehicleID'] != car_A])
-            # Load car ID and image name for negative
-            negative_row = (negative_row.loc[negative_row['colorID'] == color]).sample()
-            car_N, name_N = negative_row['vehicleID'].values[0], negative_row['imageName'].values[0]
-
-            print(car_A, name_A)
-            print(car_P, name_P)
-            print(car_N, name_N)
-
-            path_test = config.VERI_DATASET + 'train_label.xml'
-
-            gen_val = generator.MyGenerator(path_test, "image_train/", config.IMAGES, config.IMAGES)
-
-            anchor, positive, negative = load_i(dirc + name_A), load_i(dirc + name_P), load_i(dirc + name_N)
-
-            anchor_embedding, positive_embedding, negative_embedding = (
-                embedding(
-                    keras.applications.resnet50.preprocess_input(np.array([anchor]), data_format='channels_last')),
-                embedding(
-                    keras.applications.resnet50.preprocess_input(np.array([positive]), data_format='channels_last')),
-                embedding(
-                    keras.applications.resnet50.preprocess_input(np.array([negative]), data_format='channels_last')),
-            )
-
-            cosine_similarity = metrics.CosineSimilarity()
-
-            positive_similarity = cosine_similarity(anchor_embedding, positive_embedding)
-            print("Positive similarity:", positive_similarity.numpy())
-
-            negative_similarity = cosine_similarity(anchor_embedding, negative_embedding)
-            print("Negative similarity:", negative_similarity.numpy())
-
-            fig = plt.figure(figsize=(12, 5))
-            columns = 3
-            rows = 1
-            fig.add_subplot(rows, columns, 1)
-            plt.imshow(anchor)
-            fig.add_subplot(rows, columns, 2)
-            plt.imshow(positive)
-            fig.add_subplot(rows, columns, 3)
-            plt.imshow(negative)
-            plt.show()
+        # path_test = config.VERI_DATASET + 'train_label.xml'
+        # batch = config.BATCH_SIZE
+        # lenitem = batch
+        #
+        # gen_val = generator.MyGenerator(path_test, "image_train/", batch, lenitem)
+        # dirc = config.VERI_DATASET + "image_train/"
+        # for i in range(10):
+        #     gen_val.df = gen_val.df.sample(frac=1).reset_index(drop=True)
+        #     row = gen_val.df.sample()
+        #
+        #     # Load car ID and image name for anchor
+        #     car_A, name_A, color, = row['vehicleID'].values[0], row['imageName'].values[0], row['colorID'].values[0]
+        #
+        #     # Load car ID and image name for positive
+        #     positive_row = (gen_val.df.loc[gen_val.df['vehicleID'] == car_A]).sample()
+        #     car_P, name_P = positive_row['vehicleID'].values[0], positive_row['imageName'].values[0]
+        #
+        #     negative_row = (gen_val.df.loc[gen_val.df['vehicleID'] != car_A])
+        #     # Load car ID and image name for negative
+        #     negative_row = (negative_row.loc[negative_row['colorID'] == color]).sample()
+        #     car_N, name_N = negative_row['vehicleID'].values[0], negative_row['imageName'].values[0]
+        #
+        #     print(car_A, name_A)
+        #     print(car_P, name_P)
+        #     print(car_N, name_N)
+        #
+        #     path_test = config.VERI_DATASET + 'train_label.xml'
+        #
+        #     gen_val = generator.MyGenerator(path_test, "image_train/", config.IMAGES, config.IMAGES)
+        #
+        #     anchor, positive, negative = load_i(dirc + name_A), load_i(dirc + name_P), load_i(dirc + name_N)
+        #
+        #     anchor_embedding, positive_embedding, negative_embedding = (
+        #         embedding(
+        #             keras.applications.resnet50.preprocess_input(np.array([anchor]), data_format='channels_last')),
+        #         embedding(
+        #             keras.applications.resnet50.preprocess_input(np.array([positive]), data_format='channels_last')),
+        #         embedding(
+        #             keras.applications.resnet50.preprocess_input(np.array([negative]), data_format='channels_last')),
+        #     )
+        #
+        #     cosine_similarity = metrics.CosineSimilarity()
+        #
+        #     positive_similarity = cosine_similarity(anchor_embedding, positive_embedding)
+        #     print("Positive similarity:", positive_similarity.numpy())
+        #
+        #     negative_similarity = cosine_similarity(anchor_embedding, negative_embedding)
+        #     print("Negative similarity:", negative_similarity.numpy())
+        #
+        #     fig = plt.figure(figsize=(12, 5))
+        #     columns = 3
+        #     rows = 1
+        #     fig.add_subplot(rows, columns, 1)
+        #     plt.imshow(anchor)
+        #     fig.add_subplot(rows, columns, 2)
+        #     plt.imshow(positive)
+        #     fig.add_subplot(rows, columns, 3)
+        #     plt.imshow(negative)
+        #     plt.show()
 
         path_test = config.VERI_DATASET + 'test_label.xml'
         eval(path_test)

@@ -14,6 +14,8 @@ from tensorflow.keras.applications import resnet
 from keras import backend as K
 import matplotlib.pyplot as plt
 
+import keras
+
 import generator as generator
 import cv2
 import config
@@ -218,6 +220,17 @@ def visualize(anchor, positive, negative):
     plt.show()
 
 
+
+def load_i(self, p2f):
+
+    height, width, _ = config.INPUT_SHAPE
+
+    t_image = cv2.imread(p2f)
+    t_image = cv2.resize(t_image, (height, width))
+    t_image = t_image.astype("float32")
+    t_image = keras.applications.resnet50.preprocess_input(t_image, data_format='channels_last')
+    return t_image
+
 def main():
     """
     ## Training
@@ -241,16 +254,33 @@ def main():
         siamese_model.load_weights(checkpoint)
 
         for i in range(10):
+
+            row = self.df.sample()
+
+            # Load car ID and image name for anchor
+            car_A, name_A, color, = row['vehicleID'].values[0], row['imageName'].values[0], row['colorID'].values[0]
+
+            # Load car ID and image name for positive
+            positive_row = (self.df.loc[self.df['vehicleID'] == car_A]).sample()
+            car_P, name_P = positive_row['vehicleID'].values[0], positive_row['imageName'].values[0]
+
+            
+            negative_row = (self.df.loc[self.df['vehicleID'] != car_A])
+            # Load car ID and image name for negative
+            negative_row = (negative_row.loc[negative_row['colorID'] != color]).sample()
+            car_N, name_N = negative_row['vehicleID'].values[0], negative_row['imageName'].values[0]
+
+
             path_test = config.VERI_DATASET + 'test_label.xml'
 
             gen_val = generator.MyGenerator(path_test, "image_test/", config.IMAGES, config.IMAGES)
 
-            anchor, positive, negative = next(gen_val.LocalSet())
+            anchor, positive, negative = load_i(car_A), load_i(car_P), load_i(car_N)
 
             anchor_embedding, positive_embedding, negative_embedding = (
-                embedding(anchor),
-                embedding(positive),
-                embedding(positive),
+                embedding(keras.applications.resnet50.preprocess_input(anchor, data_format='channels_last')),
+                embedding(keras.applications.resnet50.preprocess_input(positive, data_format='channels_last')),
+                embedding(keras.applications.resnet50.preprocess_input(positive, data_format='channels_last')),
             )
 
             cosine_similarity = metrics.CosineSimilarity()

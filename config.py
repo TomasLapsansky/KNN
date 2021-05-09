@@ -11,6 +11,7 @@ TESTTRAIN = 0.3
 IMAGES = 2
 
 MINI_BATCH_SIZE = 8
+THRESHOLD = 0.9
 
 '''
 try:

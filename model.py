@@ -210,6 +210,69 @@ def load_i(p2f):
     return t_image
 
 
+def eval(path_test):
+    batch = config.BATCH_SIZE
+    lenitem = batch
+
+    gen_val = generator.MyGenerator(path_test, "image_test/", batch, lenitem)
+    dirc = config.VERI_DATASET + "image_test/"
+
+    N = 1000
+    positive_cnt = 0
+    negative_cnt = 0
+
+    for i in range(N):
+        row = gen_val.df.sample()
+
+        # Load car ID and image name for anchor
+        car_A, name_A, color, = row['vehicleID'].values[0], row['imageName'].values[0], row['colorID'].values[0]
+
+        # Load car ID and image name for positive
+        positive_row = (gen_val.df.loc[gen_val.df['vehicleID'] == car_A]).sample()
+        car_P, name_P = positive_row['vehicleID'].values[0], positive_row['imageName'].values[0]
+
+        negative_row = (gen_val.df.loc[gen_val.df['vehicleID'] != car_A]).sample()
+        car_N, name_N = negative_row['vehicleID'].values[0], negative_row['imageName'].values[0]
+
+        path_test = config.VERI_DATASET + 'test_label.xml'
+
+        gen_val = generator.MyGenerator(path_test, "image_test/", config.IMAGES, config.IMAGES)
+
+        anchor, positive, negative = load_i(dirc + name_A), load_i(dirc + name_P), load_i(dirc + name_N)
+
+        anchor_embedding, positive_embedding, negative_embedding = (
+            embedding(keras.applications.resnet50.preprocess_input(np.array([anchor]), data_format='channels_last')),
+            embedding(keras.applications.resnet50.preprocess_input(np.array([positive]), data_format='channels_last')),
+            embedding(keras.applications.resnet50.preprocess_input(np.array([positive]), data_format='channels_last')),
+        )
+
+        cosine_similarity = metrics.CosineSimilarity()
+
+        positive_similarity = cosine_similarity(anchor_embedding, positive_embedding)
+        # print("Positive similarity:", positive_similarity.numpy())
+
+        negative_similarity = cosine_similarity(anchor_embedding, negative_embedding)
+        # print("Negative similarity:", negative_similarity.numpy())
+
+        if positive_similarity > config.THRESHOLD:
+            positive_cnt += 1
+
+        if negative_similarity < config.THRESHOLD:
+            negative_cnt += 1
+
+        # f, axarr = plt.subplots(2, 2)
+        # axarr[0, 0] = plt.imshow(positive)
+        # axarr[0, 1] = plt.imshow(negative)
+        # axarr[1, 0] = plt.imshow(anchor)
+        # axarr[1, 1] = plt.imshow(positive)
+        #
+        # plt.show()
+
+    print("Positive accuracy: ", positive_cnt / N)
+    print("Negative accuracy: ", negative_cnt / N)
+    print("Total accuracy: ", (positive_cnt + negative_cnt) / (2 * N))
+
+
 def main():
     """
     ## Training
@@ -231,6 +294,7 @@ def main():
             exit(1)
         siamese_model.built = True
         siamese_model.load_weights(checkpoint)
+
         path_test = config.VERI_DATASET + 'train_label.xml'
         batch = config.BATCH_SIZE
         lenitem = batch
@@ -291,6 +355,8 @@ def main():
             plt.imshow(negative)
             plt.show()
 
+        path_test = config.VERI_DATASET + 'test_label.xml'
+        eval(path_test)
 
     else:
         callbacks_list = create_checkpoint()

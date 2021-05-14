@@ -1,5 +1,7 @@
 import argparse
 import os
+import random
+
 
 from keras.callbacks import ModelCheckpoint
 # from keras.utils import multi_gpu_model
@@ -213,9 +215,13 @@ def load_i(p2f):
     return t_image
 
 
+
+
 def eval(path_test):
     batch = config.BATCH_SIZE
     lenitem = batch
+
+    
 
     gen_val = generator.MyGenerator(path_test, "image_test/", batch, lenitem)
     dirc = config.VERI_DATASET + "image_test/"
@@ -275,6 +281,41 @@ def eval(path_test):
     print("Negative accuracy: ", negative_cnt / N)
     print("Total accuracy: ", (positive_cnt + negative_cnt) / (2 * N))
 
+def make_prediction(path):
+    
+    print(path)
+    files = os.listdir(path)
+    
+
+    stringsByPrefix = {}
+
+    for string in files:
+            prefix, suffix = map(str.strip, string.split("_", 1))
+            group = stringsByPrefix.setdefault(prefix, [])
+            group.append(string)
+    
+    my_set = []
+    query = []
+
+    for key in stringsByPrefix:
+        temp_list =  sorted(stringsByPrefix[key])
+        temp_choice = random.choice(temp_list)
+        query.append(temp_choice)
+        temp_list.remove(temp_choice)
+        my_set += temp_list
+        
+    print("\nQ",len(query),query,end=" \n")
+    print("\nS",len(my_set),my_set,end=" \n")
+        
+
+        
+    
+    
+
+
+    
+
+        
 
 def main():
     """
@@ -282,6 +323,10 @@ def main():
 
     We are now ready to train our model.
     """
+
+    make_prediction(config.VERI_DATASET+"image_query")
+    
+    exit(0)
 
     arguments = parseArgs()
 

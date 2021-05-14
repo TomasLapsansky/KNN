@@ -304,13 +304,49 @@ def make_prediction(path):
         temp_list.remove(temp_choice)
         my_set += temp_list
         
+
+    query , my_set =  my_set, query #FIX    
     print("\nQ",len(query),query,end=" \n")
     print("\nS",len(my_set),my_set,end=" \n")
-        
 
-        
-    
-    
+    APs = []
+
+    for quer in query:
+        query_img =  load_i(path+"/"+quer)
+        quer_id = quer.split("_", 1)
+
+        AP = 0
+
+        for item in my_set:
+            set_img =  load_i(path+"/"+item)
+
+
+            anchor_embedding, positive_embedding, negative_embedding = (
+                embedding(keras.applications.resnet50.preprocess_input(np.array([query_img]), data_format='channels_last')),
+                embedding(keras.applications.resnet50.preprocess_input(np.array([set_img]), data_format='channels_last')),
+                embedding(keras.applications.resnet50.preprocess_input(np.array([set_img]), data_format='channels_last')),
+            )   
+
+            cosine_similarity = metrics.CosineSimilarity()    
+            positive_similarity = cosine_similarity(anchor_embedding, positive_embedding)
+
+            set_id = item.split("_", 1)
+
+            if((positive_similarity > config.THRESHOLD and set_id == quer_id) or (positive_similarity < config.THRESHOLD and set_id != quer_id)):
+                AP += positive_similarity * 1
+            else:
+                AP += positive_similarity * 0
+
+        APs.append( AP /  (len(stringsByPrefix[quer_id])-1))
+
+    mAP = sum(APs) / len(APs)
+
+    print("mAP",mAP)
+                    
+
+
+
+
 
 
     
@@ -324,9 +360,9 @@ def main():
     We are now ready to train our model.
     """
 
-    make_prediction(config.VERI_DATASET+"image_query")
     
-    exit(0)
+    
+    
 
     arguments = parseArgs()
 
@@ -405,6 +441,9 @@ def main():
         #     plt.show()
 
         path_test = config.VERI_DATASET + 'test_label.xml'
+
+        make_prediction(config.VERI_DATASET+"image_query")
+        exit(0)
         eval(path_test)
 
     else:

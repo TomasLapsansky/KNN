@@ -341,7 +341,7 @@ def make_prediction(path):
         APs.append(new_ap)
         tmp += 1
         print("")
-        print(str(tmp) + "/" + str(len(query)) + " " + str(new_ap) + "                             ")
+        print("image:" + str(quer) + " " + str(tmp) + "/" + str(len(query)) + " " + str(new_ap) + "                             ")
 
     mAP = sum(APs) / len(APs)
 

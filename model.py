@@ -309,8 +309,10 @@ def make_prediction(path):
         quer_id = quer.split("_", 1)[0]
 
         AP = 0
-
+        tmp1 = 0
         for item in my_set:
+            tmp1 += 1
+            print(str(tmp1) + "/" + str(len(my_set)), end="\r")
             set_img = load_i(path + "/" + item)
 
             anchor_embedding, positive_embedding, negative_embedding = (
@@ -338,6 +340,7 @@ def make_prediction(path):
         new_ap = AP / len(my_set)
         APs.append(new_ap)
         tmp += 1
+        print("")
         print(str(tmp) + "/" + str(len(query)) + " " + str(new_ap) + "                             ", end='\r')
 
     mAP = sum(APs) / len(APs)

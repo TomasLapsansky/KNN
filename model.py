@@ -2,7 +2,6 @@ import argparse
 import os
 import random
 
-
 from keras.callbacks import ModelCheckpoint
 # from keras.utils import multi_gpu_model
 
@@ -203,7 +202,6 @@ def parseArgs():
     parser.add_argument('-o', action='store_true', dest='optimized',
                         help='Optimized file loading for large RAM', default=False)
 
-
     return parser.parse_args()
 
 
@@ -215,13 +213,9 @@ def load_i(p2f):
     return t_image
 
 
-
-
 def eval(path_test):
     batch = config.BATCH_SIZE
     lenitem = batch
-
-    
 
     gen_val = generator.MyGenerator(path_test, "image_test/", batch, lenitem)
     dirc = config.VERI_DATASET + "image_test/"
@@ -281,77 +275,75 @@ def eval(path_test):
     print("Negative accuracy: ", negative_cnt / N)
     print("Total accuracy: ", (positive_cnt + negative_cnt) / (2 * N))
 
+
 def make_prediction(path):
-    
     print(path)
     files = os.listdir(path)
-    
 
     stringsByPrefix = {}
 
     for string in files:
-            prefix, suffix = map(str.strip, string.split("_", 1))
-            group = stringsByPrefix.setdefault(prefix, [])
-            group.append(string)
-    
+        prefix, suffix = map(str.strip, string.split("_", 1))
+        group = stringsByPrefix.setdefault(prefix, [])
+        group.append(string)
+
     my_set = []
     query = []
 
     for key in stringsByPrefix:
-        temp_list =  sorted(stringsByPrefix[key])
+        temp_list = sorted(stringsByPrefix[key])
         temp_choice = random.choice(temp_list)
         query.append(temp_choice)
         temp_list.remove(temp_choice)
         my_set += temp_list
-        
 
-    query , my_set =  my_set, query #FIX    
-    print("\nQ",len(query),query,end=" \n")
-    print("\nS",len(my_set),my_set,end=" \n")
+    # query, my_set = my_set, query  # FIX
+    # print("\nQ", len(query), query, end=" \n")
+    # print("\nS", len(my_set), my_set, end=" \n")
 
     APs = []
+    tmp = 0
 
     for quer in query:
-        query_img =  load_i(path+"/"+quer)
-        quer_id = quer.split("_", 1)
+        query_img = load_i(path + "/" + quer)
+        quer_id = quer.split("_", 1)[0]
 
         AP = 0
 
         for item in my_set:
-            set_img =  load_i(path+"/"+item)
-
+            set_img = load_i(path + "/" + item)
 
             anchor_embedding, positive_embedding, negative_embedding = (
-                embedding(keras.applications.resnet50.preprocess_input(np.array([query_img]), data_format='channels_last')),
-                embedding(keras.applications.resnet50.preprocess_input(np.array([set_img]), data_format='channels_last')),
-                embedding(keras.applications.resnet50.preprocess_input(np.array([set_img]), data_format='channels_last')),
-            )   
+                embedding(
+                    keras.applications.resnet50.preprocess_input(np.array([query_img]), data_format='channels_last')),
+                embedding(
+                    keras.applications.resnet50.preprocess_input(np.array([set_img]), data_format='channels_last')),
+                embedding(
+                    keras.applications.resnet50.preprocess_input(np.array([set_img]), data_format='channels_last')),
+            )
 
-            cosine_similarity = metrics.CosineSimilarity()    
-            positive_similarity = cosine_similarity(anchor_embedding, positive_embedding)
+            cosine_similarity = metrics.CosineSimilarity()
+            positive_similarity = (cosine_similarity(anchor_embedding, positive_embedding)).numpy()
 
             set_id = item.split("_", 1)
 
-            if((positive_similarity > config.THRESHOLD and set_id == quer_id) or (positive_similarity < config.THRESHOLD and set_id != quer_id)):
-                AP += positive_similarity * 1
+            if ((positive_similarity > config.THRESHOLD and set_id == quer_id) or (
+                    positive_similarity < config.THRESHOLD and set_id != quer_id)):
+                # AP += positive_similarity * 1
+                AP += 1
             else:
-                AP += positive_similarity * 0
-
-        APs.append( AP /  (len(stringsByPrefix[quer_id])-1))
+                # AP += positive_similarity * 0
+                AP += 0
+        # new_ap = AP / (len(stringsByPrefix[quer_id]) - 1)
+        new_ap = AP / len(my_set)
+        APs.append(new_ap)
+        tmp += 1
+        print(str(tmp) + "/" + str(len(query)) + " " + str(new_ap) + "                             ", end='\r')
 
     mAP = sum(APs) / len(APs)
 
-    print("mAP",mAP)
-                    
+    print("mAP", mAP)
 
-
-
-
-
-
-    
-
-        
 
 def main():
     """
@@ -360,10 +352,6 @@ def main():
     We are now ready to train our model.
     """
 
-    
-    
-    
-
     arguments = parseArgs()
 
     siamese_model = SiameseModel(siamese_network)
@@ -371,7 +359,7 @@ def main():
     siamese_model.compile(optimizer=optimizers.Adam(0.0001))
 
     if arguments.checkpoint:
-       
+
         checkpoint = arguments.checkpoint
         print("Using checkpoint", checkpoint)
         if not os.path.exists(checkpoint):
@@ -442,14 +430,14 @@ def main():
 
         path_test = config.VERI_DATASET + 'test_label.xml'
 
-        make_prediction(config.VERI_DATASET+"image_query")
+        make_prediction(config.VERI_DATASET + "image_query")
         exit(0)
         eval(path_test)
 
     else:
         if arguments.train:
             checkpoint = arguments.train
-            print("Using checkpoint", checkpoint," and continue training")
+            print("Using checkpoint", checkpoint, " and continue training")
             if not os.path.exists(checkpoint):
                 print("Checkpoint nenajdeny")
                 exit(1)

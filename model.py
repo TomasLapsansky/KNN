@@ -307,12 +307,18 @@ def make_prediction(path):
     for quer in query:
         query_img = load_i(path + "/" + quer)
         quer_id = quer.split("_", 1)[0]
+        query_prefix, query_suffix = map(str.strip, quer.split("_", 1))
 
         AP = 0
         tmp1 = 0
+        cnt = 0
         for item in my_set:
+            item_prefix, item_suffix = map(str.strip, quer.split("_", 1))
+            if item_prefix != query_prefix:
+                continue
             tmp1 += 1
-            print(str(tmp1) + "/" + str(len(my_set)), end="\r")
+            cnt += 1
+            print(str(tmp1), end="\r")
             set_img = load_i(path + "/" + item)
 
             anchor_embedding, positive_embedding, negative_embedding = (
@@ -331,13 +337,13 @@ def make_prediction(path):
 
             if ((positive_similarity > config.THRESHOLD and set_id == quer_id) or (
                     positive_similarity < config.THRESHOLD and set_id != quer_id)):
-                # AP += positive_similarity * 1
-                AP += 1
+                AP += positive_similarity * 1
+                # AP += 1
             else:
-                # AP += positive_similarity * 0
-                AP += 0
+                AP += positive_similarity * 0
+                # AP += 0
         # new_ap = AP / (len(stringsByPrefix[quer_id]) - 1)
-        new_ap = AP / len(my_set)
+        new_ap = AP / cnt
         APs.append(new_ap)
         tmp += 1
         print("")

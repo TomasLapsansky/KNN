@@ -23,19 +23,14 @@ import config
 
 width, height, _ = config.INPUT_SHAPE
 target_shape = (width, height)
-"""
-## Setting up the embedding generator model
 
-Our Siamese Network will generate embeddings for each of the images of the
-triplet. To do this, we will use a ResNet50 model pretrained on ImageNet and
-connect a few `Dense` layers to it so we can learn to separate these
-embeddings.
 
-We will freeze the weights of all the layers of the model up until the layer `conv5_block1_out`.
-This is important to avoid affecting the weights that the model has already learned.
-We are going to leave the bottom few layers trainable, so that we can fine-tune their weights
-during training.
 """
+Model bol inspirovany z https://keras.io/examples/vision/siamese_network/
+
+zaciatok citacie
+"""
+
 
 base_cnn = resnet.ResNet50(
     weights="imagenet", input_shape=target_shape + (3,), include_top=False
@@ -56,33 +51,16 @@ for layer in base_cnn.layers:
         trainable = True
     layer.trainable = trainable
 
-"""
-## Setting up the Siamese Network model
-
-The Siamese network will receive each of the triplet images as an input,
-generate the embeddings, and output the distance between the anchor and the
-positive embedding, as well as the distance between the anchor and the negative
-embedding.
-
-To compute the distance, we can use a custom layer `DistanceLayer` that
-returns both values as a tuple.
-"""
-
 
 class DistanceLayer(layers.Layer):
-    """
-    This layer is responsible for computing the distance between the anchor
-    embedding and the positive embedding, and the anchor embedding and the
-    negative embedding.
-    """
-
+    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
     def call(self, anchor, positive, negative):
-        ap_distance = tf.reduce_sum(tf.square(anchor - positive), -1)
-        an_distance = tf.reduce_sum(tf.square(anchor - negative), -1)
-        return (ap_distance, an_distance)
+        anc_pos_dist = tf.reduce_sum(tf.square(anchor - positive), -1)
+        anc_neg_dist = tf.reduce_sum(tf.square(anchor - negative), -1)
+        return (anc_pos_dist, anc_neg_dist)
 
 
 anchor_input = layers.Input(name="anchor", shape=target_shape + (3,))
@@ -97,26 +75,9 @@ distances = DistanceLayer()(
 
 siamese_network = Model(inputs=[anchor_input, positive_input, negative_input], outputs=distances)
 
-"""
-## Putting everything together
-
-We now need to implement a model with custom training loop so we can compute
-the triplet loss using the three embeddings produced by the Siamese network.
-
-Let's create a `Mean` metric instance to track the loss of the training process.
-"""
-
 
 class SiameseModel(Model):
-    """The Siamese Network model with a custom training and testing loops.
-
-    Computes the triplet loss using the three embeddings produced by the
-    Siamese Network.
-
-    The triplet loss is defined as:
-       L(A, P, N) = max(‖f(A) - f(P)‖² - ‖f(A) - f(N)‖² + margin, 0)
-    """
-
+   
     def __init__(self, siamese_network, margin=0.5):
         super(SiameseModel, self).__init__()
         self.siamese_network = siamese_network
@@ -128,59 +89,67 @@ class SiameseModel(Model):
         return self.siamese_network(inputs)
 
     def train_step(self, data):
-        # GradientTape is a context manager that records every operation that
-        # you do inside. We are using it here to compute the loss so we can get
-        # the gradients and apply them using the optimizer specified in
-        # `compile()`.
-        with tf.GradientTape() as tape:
-            loss = self._compute_loss(data)
-            acc = self._compute_acc(data)
+        """
+        Funkcia  pre spocitanie trenovacieho kroku
+        """
 
-        # Storing the gradients of the loss function with respect to the
-        # weights/parameters.
+        with tf.GradientTape() as tape:
+            loss = self.get_loss(data)
+            acc = self.get_accuracy(data)
+
         gradients = tape.gradient(loss, self.siamese_network.trainable_weights)
 
-        # Applying the gradients on the model using the specified optimizer
+       
         self.optimizer.apply_gradients(
             zip(gradients, self.siamese_network.trainable_weights)
         )
 
-        # Let's update and return the training loss metric.
         self.loss_tracker.update_state(loss)
         self.acc_tracker.update_state(acc)
         return {"loss": self.loss_tracker.result(), "accuracy": self.acc_tracker.result()}
 
     def test_step(self, data):
-        loss = self._compute_loss(data)
-        acc = self._compute_acc(data)
+        """
+        Funkcia  pre spocitanie testovacieho kroku
+        """
 
-        # Let's update and return the loss metric.
+        loss, acc = self.get_loss(data), self.get_accuracy(data)
+
         self.loss_tracker.update_state(loss)
         self.acc_tracker.update_state(acc)
         return {"loss": self.loss_tracker.result(), "accuracy": self.acc_tracker.result()}
 
-    def _compute_loss(self, data):
-        # The output of the network is a tuple containing the distances
-        # between the anchor and the positive example, and the anchor and
-        # the negative example.
-        ap_distance, an_distance = self.siamese_network(data)
+    def get_loss(self, data):
+        """
+        Funkcia  pre vypocet loss
+        """
 
-        # Computing the Triplet Loss by subtracting both distances and
-        # making sure we don't get a negative value.
-        loss = ap_distance - an_distance
+        anc_pos_dist, anc_neg_dist = self.siamese_network(data)
+        loss = anc_pos_dist - anc_neg_dist
         loss = tf.maximum(loss + self.margin, 0.0)
         return loss
 
-    def _compute_acc(self, data):
-        ap_distance, an_distance = self.siamese_network(data)
-        return K.mean(ap_distance < an_distance)
+    def get_accuracy(self, data):
+        """
+        Funkcia  pre vypocet accuracy
+        """
+        anc_pos_dist, anc_neg_dist = self.siamese_network(data)
+        return K.mean(anc_pos_dist < anc_neg_dist)
 
     @property
     def metrics(self):
-        # We need to list our metrics here so the `reset_states()` can be
-        # called automatically.
-        return [self.loss_tracker, self.acc_tracker]  # EDIT < NEUPRAVILI SME TO MALO BY TO TAM BYT @FILIP
+        return [self.loss_tracker, self.acc_tracker]  
 
+
+"""
+koniec citacie
+"""
+
+
+
+"""
+Vytvorenie checkpointu
+"""
 
 def create_checkpoint():
     checkpoint_path = os.getcwd() + "/checkpoint"
@@ -193,6 +162,10 @@ def create_checkpoint():
     return callbacks_list
 
 
+"""
+Parsovanie argumentov
+"""
+
 def parseArgs():
     parser = argparse.ArgumentParser(description='Directory with captured samples')
     parser.add_argument('-c', action='store', dest='checkpoint',
@@ -204,6 +177,10 @@ def parseArgs():
 
     return parser.parse_args()
 
+"""
+Nacitanie obrázku 
+"""
+
 
 def load_i(p2f):
     height, width, _ = config.INPUT_SHAPE
@@ -211,6 +188,10 @@ def load_i(p2f):
     t_image = cv2.imread(p2f)
     t_image = cv2.resize(t_image, (height, width))
     return t_image
+
+"""
+Evaluacia výsledkov
+"""
 
 
 def eval(path_test):
@@ -263,18 +244,13 @@ def eval(path_test):
         if negative_similarity < config.THRESHOLD:
             negative_cnt += 1
 
-        # f, axarr = plt.subplots(2, 2)
-        # axarr[0, 0] = plt.imshow(positive)
-        # axarr[0, 1] = plt.imshow(negative)
-        # axarr[1, 0] = plt.imshow(anchor)
-        # axarr[1, 1] = plt.imshow(positive)
-        #
-        # plt.show()
-
     print("Positive accuracy: ", positive_cnt / N)
     print("Negative accuracy: ", negative_cnt / N)
     print("Total accuracy: ", (positive_cnt + negative_cnt) / (2 * N))
 
+"""
+Funkcia pre vykonanie predikcie
+"""
 
 def make_prediction(path):
     print(path)
@@ -296,10 +272,6 @@ def make_prediction(path):
         query.append(temp_choice)
         temp_list.remove(temp_choice)
         my_set += temp_list
-
-    # query, my_set = my_set, query  # FIX
-    # print("\nQ", len(query), query, end=" \n")
-    # print("\nS", len(my_set), my_set, end=" \n")
 
     APs = []
     tmp = 0
@@ -355,19 +327,19 @@ def make_prediction(path):
 
 
 def main():
-    """
-    ## Training
+    
 
-    We are now ready to train our model.
-    """
+    arguments = parseArgs()                                                 #Nacitanie argumentov
 
-    arguments = parseArgs()
+    siamese_model = SiameseModel(siamese_network)                           #Vytvorenie siete
 
-    siamese_model = SiameseModel(siamese_network)
-
-    siamese_model.compile(optimizer=optimizers.Adam(0.0001))
+    siamese_model.compile(optimizer=optimizers.Adam(0.0001))                #Kompilacia sieti
 
     if arguments.checkpoint:
+        
+        """
+        Spustenie natrenovaneho modelu a vykonanie predikcie
+        """
 
         checkpoint = arguments.checkpoint
         print("Using checkpoint", checkpoint)
@@ -377,66 +349,6 @@ def main():
         siamese_model.built = True
         siamese_model.load_weights(checkpoint)
 
-        # path_test = config.VERI_DATASET + 'train_label.xml'
-        # batch = config.BATCH_SIZE
-        # lenitem = batch
-        #
-        # gen_val = generator.MyGenerator(path_test, "image_train/", batch, lenitem)
-        # dirc = config.VERI_DATASET + "image_train/"
-        # for i in range(10):
-        #     gen_val.df = gen_val.df.sample(frac=1).reset_index(drop=True)
-        #     row = gen_val.df.sample()
-        #
-        #     # Load car ID and image name for anchor
-        #     car_A, name_A, color, = row['vehicleID'].values[0], row['imageName'].values[0], row['colorID'].values[0]
-        #
-        #     # Load car ID and image name for positive
-        #     positive_row = (gen_val.df.loc[gen_val.df['vehicleID'] == car_A]).sample()
-        #     car_P, name_P = positive_row['vehicleID'].values[0], positive_row['imageName'].values[0]
-        #
-        #     negative_row = (gen_val.df.loc[gen_val.df['vehicleID'] != car_A])
-        #     # Load car ID and image name for negative
-        #     negative_row = (negative_row.loc[negative_row['colorID'] == color]).sample()
-        #     car_N, name_N = negative_row['vehicleID'].values[0], negative_row['imageName'].values[0]
-        #
-        #     print(car_A, name_A)
-        #     print(car_P, name_P)
-        #     print(car_N, name_N)
-        #
-        #     path_test = config.VERI_DATASET + 'train_label.xml'
-        #
-        #     gen_val = generator.MyGenerator(path_test, "image_train/", config.IMAGES, config.IMAGES)
-        #
-        #     anchor, positive, negative = load_i(dirc + name_A), load_i(dirc + name_P), load_i(dirc + name_N)
-        #
-        #     anchor_embedding, positive_embedding, negative_embedding = (
-        #         embedding(
-        #             keras.applications.resnet50.preprocess_input(np.array([anchor]), data_format='channels_last')),
-        #         embedding(
-        #             keras.applications.resnet50.preprocess_input(np.array([positive]), data_format='channels_last')),
-        #         embedding(
-        #             keras.applications.resnet50.preprocess_input(np.array([negative]), data_format='channels_last')),
-        #     )
-        #
-        #     cosine_similarity = metrics.CosineSimilarity()
-        #
-        #     positive_similarity = cosine_similarity(anchor_embedding, positive_embedding)
-        #     print("Positive similarity:", positive_similarity.numpy())
-        #
-        #     negative_similarity = cosine_similarity(anchor_embedding, negative_embedding)
-        #     print("Negative similarity:", negative_similarity.numpy())
-        #
-        #     fig = plt.figure(figsize=(12, 5))
-        #     columns = 3
-        #     rows = 1
-        #     fig.add_subplot(rows, columns, 1)
-        #     plt.imshow(anchor)
-        #     fig.add_subplot(rows, columns, 2)
-        #     plt.imshow(positive)
-        #     fig.add_subplot(rows, columns, 3)
-        #     plt.imshow(negative)
-        #     plt.show()
-
         path_test = config.VERI_DATASET + 'test_label.xml'
 
         make_prediction(config.VERI_DATASET + "image_query")
@@ -444,7 +356,15 @@ def main():
         eval(path_test)
 
     else:
+
+        """
+        Spustenie modelu a spustenie trenovania
+        """
+
         if arguments.train:
+            """
+            Ak existuje checkpoint 
+            """
             checkpoint = arguments.train
             print("Using checkpoint", checkpoint, " and continue training")
             if not os.path.exists(checkpoint):
@@ -455,17 +375,17 @@ def main():
 
         callbacks_list = create_checkpoint()
 
-        path_train = config.VERI_DATASET + 'train_label.xml'
-        path_test = config.VERI_DATASET + 'test_label.xml'
-        batch = config.BATCH_SIZE
+        path_train = config.VERI_DATASET + 'train_label.xml'                                        #Nastavenie cesty k train
+        path_test = config.VERI_DATASET + 'test_label.xml'                                          #Nastavenie cesty k test
+        batch = config.BATCH_SIZE                                                                   #Nastavenie batch
         lenitem = batch
 
-        gen_train = generator.MyGenerator(path_train, "image_train/", batch, lenitem)
-        gen_val = generator.MyGenerator(path_test, "image_test/", batch, lenitem)
+        gen_train = generator.MyGenerator(path_train, "image_train/", batch, lenitem)               #Vytvorenie generatoru pre train
+        gen_val = generator.MyGenerator(path_test, "image_test/", batch, lenitem)                   #Vytvorenie generatoru pre test
         SPE = len(gen_train.Y_train) / config.EPOCHS
         print(SPE)
 
-        model_in = None
+        model_in = None                                                                             # Trenovanie 
         for i in range(1, config.EPOCHS + 1):
             print("EPOCH:" + str(i) + "/" + str(config.EPOCHS))
 
